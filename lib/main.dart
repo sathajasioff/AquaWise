@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:watermeter/screens/Home/home_screen.dart';
 import 'package:watermeter/screens/Login/logi.dart';
+import 'package:watermeter/screens/SignUp/signup.dart';
 
 void main() {
 
@@ -16,9 +18,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Color.fromARGB(255, 23, 110, 210)),
       ),
-      home: const loginScreen(),
-    );
-  }
+      home: LoginPage(),
+      routes: {
+    '/signup': (context) => const SignupPage(), 
+    '/login' : (context) => const LoginPage(),
+  },
+
+  
+  );
+}
 }
