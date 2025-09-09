@@ -2,7 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignupController {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  
+  FirebaseAuth get _auth => FirebaseAuth.instance; 
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
