@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:watermeter/screens/Home/home_screen.dart';
 import 'package:watermeter/screens/Login/logi.dart';
 
 void main() {
@@ -18,7 +19,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const loginScreen(),
+      home: const AquaCardApp(),
     );
   }
 }
