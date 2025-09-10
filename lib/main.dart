@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:watermeter/screens/ForgotPassword/forgotPassword.dart';
+import 'package:watermeter/screens/Home/dashboard_1.dart';
 import 'package:watermeter/screens/Home/home_screen.dart';
-import 'package:watermeter/screens/Login/logi.dart';
+import 'package:watermeter/screens/Login/login.dart';
+import 'package:watermeter/screens/Profile/profile.dart';
+import 'package:watermeter/screens/Questionnaire/quesScreen_1.dart';
 import 'package:watermeter/screens/SignUp/signup.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+// import 'firebase_options.dart'; // Uncomment if you have this file from flutterfire configure
 
-void main() {
-  // Future<void> main() async {
-  //   WidgetsFlutterBinding.ensureInitialized();
-  //   await Firebase.initializeApp();
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-  //   // Ideal time to initialize
-  //   await FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-  //   //...
-  // }
+  // If you have firebase_options.dart, use this:
+  // await Firebase.initializeApp(
+  //   options: DefaultFirebaseOptions.currentPlatform,
+  // );
+
+  // Otherwise, this works if google-services.json (Android)
+  // and GoogleService-Info.plist (iOS) are correctly added:
+  await Firebase.initializeApp();
 
   runApp(const MyApp());
 }
@@ -20,21 +27,26 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'WaterMeter',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Color.fromARGB(255, 23, 110, 210),
+          seedColor: const Color.fromARGB(255, 23, 110, 210),
         ),
+        useMaterial3: true,
       ),
-      home: LoginPage(),
+      home: LoginPage(), // Start at login screen
       routes: {
         '/signup': (context) => const SignupPage(),
         '/login': (context) => const LoginPage(),
-        '/home': (BuildContext context) => const homeScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/dashboard1': (context) => const DashboardPage(),
+        '/questionnaire1': (context) => const QuestionnairePage(),
+        '/forgotPassword': (context) => const ForgotPasswordPage(), 
+        '/profilepage': (context) => const ProfilePage(), // Placeholder, replace with actual ProfilePage when available
       },
     );
   }

@@ -1,16 +1,11 @@
-# watermeter
+this project was developer by flutter - flutter 3.35.1 • channel stable • https://github.com/flutter/flutter.git
 
-A new Flutter project.
+for google sign in i connect firebase auth with google sign menthod 
 
-## Getting Started
+for map intergrated with google map with their secreate key 
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+all the api configurations are kept in api.dart file 
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+note - cant able to get the images when i run url its not working also

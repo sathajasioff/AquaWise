@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "65192357600",
+    "project_id": "watermeter-88477",
+    "storage_bucket": "watermeter-88477.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65192357600:android:6a162dacf121f8c6af2a85",
+        "android_client_info": {
+          "package_name": "com.example.watermeter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "65192357600-2qhkh45sdsfahd216al56r9pu9qqdb4p.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.watermeter",
+            "certificate_hash": "bdf1018f32f541a6203ca8cbd2b0d6643941a96f"
+          }
+        },
+        {
+          "client_id": "65192357600-n09s9lpc5g6n4n9k9vic56fk0g5s91q6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3fzqRA4Zu2Ms6vYXgAyy310lE1B07KNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "65192357600-n09s9lpc5g6n4n9k9vic56fk0g5s91q6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "65192357600-ush692ivujfmqf55v9u57elot6h22v2f.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.watermeter"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
