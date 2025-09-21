@@ -1,8 +1,14 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:watermeter/screens/Home/dashboard_1.dart';
+import 'package:watermeter/screens/Profile/profile.dart';
+// import 'home_page.dart';
+// import 'track_page.dart';
+// import 'profile_page.dart';
 
 class AIPersonalizationPage extends StatefulWidget {
   const AIPersonalizationPage({super.key});
@@ -97,7 +103,9 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
       Focus on household tips relevant to their goal (e.g., Eco Warrior: environmental impact, Budget Saver: cost savings, Family Mode: family habits, Casual User: simple actions).
       ''';
       print('Calling Gemini with persona: $persona'); // Debug
-      final response = await gemini.text(prompt); // Use text method
+      final response = await gemini.text(prompt).timeout(Duration(seconds: 10), onTimeout: () {
+        throw Exception('Gemini API timed out');
+      });
       print('Raw Gemini response: $response'); // Debug
       print('Response JSON: ${response?.toJson()}'); // Debug JSON structure
 
@@ -181,23 +189,39 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
   }
 
   void _onNavItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    // Add navigation logic here (e.g., Navigator.push to other pages)
-    switch (index) {
-      case 0:
-        print('dashboard1'); // Replace with actual navigation
-        break;
-      case 1:
-        print('Navigate to Track'); // Replace with actual navigation
-        break;
-      case 2:
-        print('Stay on Tips'); // Already on this page
-        break;
-      case 3:
-        print('Navigate to Profile'); // Replace with actual navigation
-        break;
+    if (index == _selectedIndex) return; // Avoid re-navigating to the same page
+    try {
+      setState(() {
+        _selectedIndex = index;
+      });
+      switch (index) {
+        case 0:
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
+          );
+          break;
+        // case 1:
+        //   Navigator.pushReplacement(
+        //     context,
+        //     MaterialPageRoute(builder: (context) => const ),
+        //   );
+        //   break;
+        case 2:
+          // Already on Tips page (AIPersonalizationPage)
+          break;
+        case 3:
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ProfilePage()),
+          );
+          break;
+      }
+    } catch (e) {
+      print('Navigation error: $e');
+      setState(() {
+        errorMessage = 'Navigation failed: $e';
+      });
     }
   }
 
