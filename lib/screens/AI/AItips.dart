@@ -16,6 +16,7 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
   bool isLoading = true;
   String? errorMessage;
   List<Map<String, String>> tips = [];
+  int _selectedIndex = 2; // Default to Tips (this page)
 
   @override
   void initState() {
@@ -179,6 +180,27 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
     ];
   }
 
+  void _onNavItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    // Add navigation logic here (e.g., Navigator.push to other pages)
+    switch (index) {
+      case 0:
+        print('dashboard1'); // Replace with actual navigation
+        break;
+      case 1:
+        print('Navigate to Track'); // Replace with actual navigation
+        break;
+      case 2:
+        print('Stay on Tips'); // Already on this page
+        break;
+      case 3:
+        print('Navigate to Profile'); // Replace with actual navigation
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -243,6 +265,41 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.water_drop),
+            label: 'Track',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.lightbulb),
+            label: 'Tips',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: const Color(0xFF176ED2),
+        unselectedItemColor: Colors.grey[600],
+        backgroundColor: Colors.white,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+        ),
+        elevation: 8,
+        onTap: _onNavItemTapped,
       ),
     );
   }
