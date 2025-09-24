@@ -20,6 +20,12 @@ class DashboardPage extends StatelessWidget {
           ),
         ),
         actions: [
+
+          IconButton(
+    icon: const Icon(Icons.emoji_events_outlined, color: Colors.black87),
+    onPressed: () => Navigator.pushNamed(context, '/gamification'),
+  ),
+  
           IconButton(
             icon: const Icon(Icons.person, color: Colors.black87),
             onPressed: () {
@@ -156,7 +162,31 @@ class DashboardPage extends StatelessWidget {
                   child: _statCard("Weekly Goal", "1400L", Colors.orange),
                 ),
               ],
+
             ),
+
+          //     ADD THIS SECTION 
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(context, '/gamification'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF176ED2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    "Open Gamification",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white),
+                  ),
+                ),
+              ),
+              // END ADDED SECTION ⬆
+
+
           ],
         ),
       ),

@@ -7,6 +7,7 @@ import 'package:watermeter/screens/Profile/profile.dart';
 import 'package:watermeter/screens/Questionnaire/quesScreen_1.dart';
 import 'package:watermeter/screens/SignUp/signup.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:watermeter/screens/Gamification/gamification_screen.dart';
 // import 'firebase_options.dart'; // Uncomment if you have this file from flutterfire configure
 
 Future<void> main() async {
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
         '/questionnaire1': (context) => const QuestionnairePage(),
         '/forgotPassword': (context) => const ForgotPasswordPage(), 
         '/profilepage': (context) => const ProfilePage(), // Placeholder, replace with actual ProfilePage when available
+        '/gamification': (context) => const GamificationScreen(),
       },
     );
   }
