@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:watermeter/screens/AI/AItipOP.dart';
 import 'package:watermeter/screens/AI/AItips.dart';
 import 'package:watermeter/screens/ForgotPassword/forgotPassword.dart';
 import 'package:watermeter/screens/Home/dashboard_1.dart';
@@ -11,56 +12,28 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:watermeter/screens/Test/check_user_type.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-// import 'firebase_options.dart'; // Uncomment if you have this file from flutterfire configure
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // If you have firebase_options.dart, use this:
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
-
-  // Otherwise, this works if google-services.json (Android)
-  // and GoogleService-Info.plist (iOS) are correctly added:
+  // Initialize Firebase
   await Firebase.initializeApp();
-  // String? errorMessage;
 
-  // try {
-  //   await dotenv.load(fileName: ".env");
-  //   print('DotEnv loaded successfully');
-  //   print('GEMINI_API_KEY: ${dotenv.env['GEMINI_API_KEY']}'); // Debug
-  // } catch (e, stackTrace) {
-  //   print('Error loading .env file: $e\nStackTrace: $stackTrace');
-  //   errorMessage = 'Failed to load .env file: $e';
-  // }
-
-  // if (errorMessage == null) {
-  //   final apiKey = dotenv.env['GEMINI_API_KEY'];
-  //   if (apiKey == null || apiKey.isEmpty) {
-  //     print('Error: GEMINI_API_KEY is missing or empty');
-  //     errorMessage = 'GEMINI_API_KEY is missing';
-  //   } else {
-  //     try {
-  //       await Gemini.init(apiKey: apiKey);
-  //       print('Gemini initialized successfully');
-  //     } catch (e, stackTrace) {
-  //       print('Error initializing Gemini: $e\nStackTrace: $stackTrace');
-  //       errorMessage = 'Failed to initialize Gemini: $e';
-  //     }
-  //   }
-  // }
   String? errorMessage;
 
+  // Load .env file
   try {
     await dotenv.load(fileName: ".env");
     print('DotEnv loaded successfully');
-    print('GEMINI_API_KEY: ${dotenv.env['GEMINI_API_KEY']?.substring(0, 4)}... (obfuscated for security)'); // Partial key
+    print(
+      'GEMINI_API_KEY: ${dotenv.env['GEMINI_API_KEY']?.substring(0, 4)}... (obfuscated)',
+    );
   } catch (e, stackTrace) {
     print('Error loading .env file: $e\nStackTrace: $stackTrace');
     errorMessage = 'Failed to load .env file: $e';
   }
 
+  // Initialize Gemini
   if (errorMessage == null) {
     final apiKey = dotenv.env['GEMINI_API_KEY'];
     if (apiKey == null || apiKey.isEmpty) {
@@ -68,24 +41,27 @@ Future<void> main() async {
       errorMessage = 'GEMINI_API_KEY is missing or empty';
     } else {
       try {
-        await Gemini.init(apiKey: 'AIzaSyDqJb9WqzkqPju5JcKCIw13Lvg4OyiS89w');
+        await Gemini.init(apiKey: apiKey);
         print('Gemini initialized successfully');
-        // Test API connectivity
+
+        // Optional test call
         final gemini = Gemini.instance;
         final testResponse = await gemini.text('Test connectivity');
-        print('Gemini test response: ${testResponse?.toJson()}');
+        print('Gemini test response: ${testResponse?.output}');
       } catch (e, stackTrace) {
         print('Error initializing or testing Gemini: $e\nStackTrace: $stackTrace');
         errorMessage = 'Failed to initialize or test Gemini: $e';
       }
     }
   }
-  runApp(const MyApp());
+
+  // Optional: pass error message to app for UI handling
+  runApp(MyApp(geminiError: errorMessage));
 }
 
-
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? geminiError;
+  const MyApp({super.key, this.geminiError});
 
   @override
   Widget build(BuildContext context) {
@@ -98,17 +74,28 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: AIPersonalizationPage(), // Start at login screen
+      home: geminiError != null
+          ? Scaffold(
+              body: Center(
+                child: Text(
+                  'Error initializing AI: $geminiError',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.red),
+                ),
+              ),
+            )
+          : AiTipsPage(), // Start at AI Tips Page
       routes: {
         '/signup': (context) => const SignupPage(),
         '/login': (context) => const LoginPage(),
         '/home': (context) => const HomeScreen(),
         '/dashboard1': (context) => const DashboardPage(),
         '/questionnaire1': (context) => const QuestionnairePage(),
-        '/forgotPassword': (context) => const ForgotPasswordPage(), 
+        '/forgotPassword': (context) => const ForgotPasswordPage(),
         '/profilepage': (context) => const ProfilePage(),
-        '/aitips' : (context) => const AIPersonalizationPage(), 
-        '/checkusertype' :(context) => const CheckUserTypePage()// Add this line for AI Tips page
+        '/aitips': (context) => const AIPersonalizationPage(),
+        '/aitipsop': (context) => const AiTipsPage(),
+        '/checkusertype': (context) => const CheckUserTypePage(),
       },
     );
   }
