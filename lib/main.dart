@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: LoginPage(), // Start at login screen
+      home: GamificationScreen(), // Start at login screen
       routes: {
         '/signup': (context) => const SignupPage(),
         '/login': (context) => const LoginPage(),
