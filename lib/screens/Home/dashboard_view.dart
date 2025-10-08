@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
+import 'package:watermeter/widgets/dashboard_navbar.dart';
 import '../../controllers/dashboard_controller.dart';
 import '../../models/user.dart';
 import '../../models/usage_model.dart';
+import '../../widgets/usage_chart.dart';
+
+// persona screens
+import '../Home/eco_dashboard.dart';
+import '../Home/family_dashboard.dart';
+import '../Home/budget_dashboard.dart';
+import '../Home/student_dashboard.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({Key? key}) : super(key: key);
-
   @override
   State<DashboardView> createState() => _DashboardViewState();
 }
@@ -16,13 +23,14 @@ class _DashboardViewState extends State<DashboardView> {
   final DashboardController _controller = DashboardController();
   User? currentUser;
 
-  // Timer variables
   bool _isTiming = false;
   Timer? _timer;
   int _seconds = 0;
   String _activity = 'Bathing';
   double _budgetLiters = 5000;
   double _litersUsed = 0;
+
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -32,19 +40,19 @@ class _DashboardViewState extends State<DashboardView> {
   }
 
   Future<void> _loadUser() async {
-    final userData = await _controller.fetchUser();
-    setState(() => currentUser = userData);
+    final u = await _controller.fetchUser();
+    setState(() => currentUser = u);
   }
 
   void _loadMonthlyData() async {
-    final total = await _controller.getMonthlyTotal();
+    final total = await _controller.monthlyTotalLiters();
     setState(() => _litersUsed = total);
   }
 
   void _startTimer() {
     setState(() => _isTiming = true);
     _seconds = 0;
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() => _seconds++);
     });
   }
@@ -52,171 +60,342 @@ class _DashboardViewState extends State<DashboardView> {
   void _stopTimer() async {
     _timer?.cancel();
     setState(() => _isTiming = false);
-
-    // Simple conversion (10L/min)
     final liters = (_seconds / 60) * 10;
     await _controller.logWaterUsage(_activity, liters);
     _loadMonthlyData();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Logged $_activity: ${liters.toStringAsFixed(1)} L")),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Logged $_activity: ${liters.toStringAsFixed(1)} L"),
+        ),
+      );
+    }
   }
 
   void _setBudget() {
     showDialog(
       context: context,
-      builder: (context) {
-        final controller = TextEditingController();
+      builder: (_) {
+        final txt = TextEditingController(
+          text: _budgetLiters.toStringAsFixed(0),
+        );
         return AlertDialog(
           title: const Text("Set Monthly Budget (Liters)"),
           content: TextField(
-            controller: controller,
+            controller: txt,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: "Enter liters"),
+            decoration: const InputDecoration(hintText: "e.g. 5000"),
           ),
           actions: [
             TextButton(
               onPressed: () {
-                setState(() =>
-                    _budgetLiters = double.tryParse(controller.text) ?? 5000);
+                final v = double.tryParse(txt.text.trim());
+                if (v != null) setState(() => _budgetLiters = v);
                 Navigator.pop(context);
               },
               child: const Text("Save"),
-            )
+            ),
           ],
         );
       },
     );
   }
 
+  Widget _personaSection(String persona) {
+    final type = persona.toLowerCase();
+    if (type.contains('eco')) {
+      return EcoDashboard(controller: _controller);
+    } else if (type.contains('family')) {
+      return FamilyDashboard(controller: _controller);
+    } else if (type.contains('budget')) {
+      return BudgetDashboard(controller: _controller);
+    } else {
+      return const CasualDashboard();
+    }
+  }
+
+  // 🧭 Navigation pages
+  Widget _getSelectedScreen() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildDashboardBody();
+      case 1:
+        return const Center(child: Text("Profile Screen"));
+      case 3:
+        return const Center(child: Text("Settings Screen"));
+      default:
+        return _buildDashboardBody();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F8FC),
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        title: Text(
+          "Welcome, ${currentUser?.name ?? 'User'}",
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: _getSelectedScreen(),
+      bottomNavigationBar: DashboardNavBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+      ),
+    );
+  }
+
+  // 💧 The actual dashboard content separated for cleaner code
+  Widget _buildDashboardBody() {
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final remaining = _budgetLiters - _litersUsed;
     final percentage = (_litersUsed / _budgetLiters).clamp(0, 1);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Welcome, ${currentUser!.name}"),
-        actions: [
-          IconButton(onPressed: _setBudget, icon: const Icon(Icons.settings)),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              Navigator.pop(context);
-            },
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Monthly summary
+          Card(
+            color: Colors.white,
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.water_drop, color: Colors.blueAccent),
+                      SizedBox(width: 8),
+                      Text(
+                        "Monthly Water Budget",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: percentage.toDouble(),
+                    minHeight: 10,
+                    backgroundColor: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(10),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "${_litersUsed.toStringAsFixed(1)} L used",
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        "${_budgetLiters.toStringAsFixed(0)} L budget",
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Remaining: ${remaining.toStringAsFixed(1)} L",
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- Monthly Summary ---
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    Text(
-                      "Monthly Water Budget",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: percentage.toDouble(),
-                      minHeight: 10,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "${_litersUsed.toStringAsFixed(1)} L used / ${_budgetLiters.toStringAsFixed(0)} L budgeted",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "Remaining: ${remaining.toStringAsFixed(1)} L",
-                      style: const TextStyle(color: Colors.green),
-                    ),
-                  ],
+          const SizedBox(height: 16),
+
+          // Budget card
+          GestureDetector(
+            onTap: _setBudget,
+            child: Card(
+              color: Colors.blueAccent.shade100.withOpacity(0.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const ListTile(
+                leading: Icon(Icons.calendar_month, color: Colors.blueAccent),
+                title: Text(
+                  "Set Your Monthly Budget",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                trailing: Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.blueAccent,
+                  size: 18,
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 20),
-
-            // --- Activity Timer ---
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: _activity,
-                    items: const [
-                      DropdownMenuItem(value: "Bathing", child: Text("Bathing")),
-                      DropdownMenuItem(value: "Cleaning", child: Text("Cleaning")),
-                      DropdownMenuItem(value: "Washing", child: Text("Washing")),
-                      DropdownMenuItem(value: "Cooking", child: Text("Cooking")),
-                    ],
-                    onChanged: (val) => setState(() => _activity = val!),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  onPressed: _isTiming ? _stopTimer : _startTimer,
-                  icon: Icon(_isTiming ? Icons.stop : Icons.play_arrow),
-                  label: Text(_isTiming ? "Stop" : "Start"),
+          // Timer
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Track Your Water Usage",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          fillColor: Colors.grey.shade100,
+                          filled: true,
+                        ),
+                        value: _activity,
+                        items: const [
+                          DropdownMenuItem(value: "Bathing", child: Text("Bathing")),
+                          DropdownMenuItem(value: "Cleaning", child: Text("Cleaning")),
+                          DropdownMenuItem(value: "Washing", child: Text("Washing")),
+                          DropdownMenuItem(value: "Cooking", child: Text("Cooking")),
+                        ],
+                        onChanged: (v) => setState(() => _activity = v!),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton.icon(
+                      onPressed: _isTiming ? _stopTimer : _startTimer,
+                      icon:
+                          Icon(_isTiming ? Icons.stop : Icons.play_arrow_outlined),
+                      label: Text(_isTiming ? "Stop" : "Start"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            _isTiming ? Colors.redAccent : Colors.blueAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 14),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: Text(
+                    "Timer: $_seconds s",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
 
-            const SizedBox(height: 20),
-            Center(
-              child: Text(
-                "Timer: $_seconds s",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+          // Chart + Logs
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Water Usage Overview",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<WaterUsage>>(
+                  stream: _controller.usageStream(),
+                  builder: (context, snap) {
+                    final logs = snap.data ?? const <WaterUsage>[];
+                    if (!snap.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        UsageChart(usageLogs: logs),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "Recent Activity Logs",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        if (logs.isEmpty)
+                          const Text("No usage logs yet.")
+                        else
+                          ...logs.take(8).map(
+                                (l) => ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.water_drop,
+                                      color: Colors.blueAccent),
+                                  title: Text(
+                                      "${l.activity} - ${l.liters.toStringAsFixed(1)} L"),
+                                  subtitle: Text(
+                                    l.date
+                                        .toString()
+                                        .split(".")[0]
+                                        .replaceAll("T", "  "),
+                                  ),
+                                ),
+                              ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 28),
 
-            const SizedBox(height: 30),
-            const Text(
-              "Recent Logs",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            StreamBuilder<List<WaterUsage>>(
-              stream: _controller.getUsageLogs(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final logs = snapshot.data!;
-                if (logs.isEmpty) {
-                  return const Text("No usage logs yet.");
-                }
-                return Column(
-                  children: logs
-                      .map((log) => ListTile(
-                            leading: const Icon(Icons.water_drop, color: Colors.blue),
-                            title: Text("${log.activity} - ${log.liters.toStringAsFixed(1)} L"),
-                            subtitle: Text(
-                              log.date.toString().split(".")[0],
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ))
-                      .toList(),
-                );
-              },
-            ),
-          ],
-        ),
+          // Persona dashboard section
+          _personaSection(currentUser!.persona ?? 'casual'),
+        ],
       ),
     );
   }

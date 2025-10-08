@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
 
-class StudentDashboard extends StatelessWidget {
+class CasualDashboard extends StatelessWidget {
+  const CasualDashboard({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: const [
-        Text("🎯 Student / Young Pro Dashboard",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        SizedBox(height: 12),
-        Card(
+    final tasks = [
+      "Log one shower today",
+      "Try 2-min shorter wash",
+      "Fill a bottle instead of running tap",
+      "Use a bowl for veggie washing",
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("🎮 Casual Dashboard", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        const Text("Quick tasks to get familiar:", style: TextStyle(color: Colors.grey)),
+        const SizedBox(height: 8),
+        ...tasks.map((t) => Card(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: ListTile(
-            title: Text("Current Streak"),
-            subtitle: Text("🔥 7 Days Active"),
+            leading: const Icon(Icons.check_circle_outline),
+            title: Text(t),
+            trailing: const Icon(Icons.chevron_right),
           ),
-        ),
-        Card(
-          child: ListTile(
-            title: Text("Leaderboard"),
-            subtitle: Text("You are #3 among your friends"),
-          ),
-        ),
+        )),
       ],
     );
   }

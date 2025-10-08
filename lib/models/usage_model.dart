@@ -27,4 +27,6 @@ class WaterUsage {
       date: DateTime.parse(data['date']),
     );
   }
+
+  get memberName => null;
 }

@@ -1,19 +1,19 @@
 class User {
   final String username;
   final String email;
-  final String? userType; // optional now
+  final String? persona; // optional now
 
   User({
     required this.username,
     required this.email,
-    this.userType,
+    this.persona,
   });
 
   factory User.fromMap(Map<String, dynamic> data, String id) {
     return User(
       username: data['username'] ?? '',
       email: data['email'] ?? '',
-      userType: data['userType'],
+      persona: data['persona'],
     );
   }
 
@@ -23,7 +23,7 @@ class User {
     return {
       'username': username,
       'email': email,
-      if (userType != null) 'userType': userType,
+      if (persona != null) 'persona': persona,
     };
   }
 }
