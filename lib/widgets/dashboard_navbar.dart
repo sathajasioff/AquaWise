@@ -47,7 +47,7 @@ class DashboardNavBar extends StatelessWidget {
       case 3: // Settings
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const settings()),
+          MaterialPageRoute(builder: (_) => const SettingsPage()),
         );
         break;
     }

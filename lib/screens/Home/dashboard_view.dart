@@ -6,6 +6,7 @@ import '../../controllers/dashboard_controller.dart';
 import '../../models/user.dart';
 import '../../models/usage_model.dart';
 import '../../widgets/usage_chart.dart';
+import '../../settings/settings.dart';
 
 // persona screens
 import '../Home/eco_dashboard.dart';

@@ -1,41 +1,37 @@
+// lib/controllers/theme_controller.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ThemeController extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
+  final _fs = FirebaseFirestore.instance;
 
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
 
-  /// Load saved theme from Firestore
-  Future<void> loadUserTheme() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    final doc = await _firestore.collection('users').doc(user.uid).get();
-    final theme = doc.data()?['theme'] ?? 'system';
-
+  void _apply(String theme) {
     switch (theme) {
-      case 'light':
-        _themeMode = ThemeMode.light;
-        break;
-      case 'dark':
-        _themeMode = ThemeMode.dark;
-        break;
-      default:
-        _themeMode = ThemeMode.system;
+      case 'light': _themeMode = ThemeMode.light; break;
+      case 'dark':  _themeMode = ThemeMode.dark;  break;
+      default:      _themeMode = ThemeMode.system;
     }
     notifyListeners();
   }
 
-  /// Update theme preference in Firestore and locally
-  Future<void> updateTheme(String theme) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
+  Future<void> loadUserTheme() async {
+    final u = _auth.currentUser;
+    if (u == null) { _apply('system'); return; }
+    final snap = await _fs.collection('users').doc(u.uid).get();
+    _apply((snap.data()?['theme'] ?? 'system') as String);
+  }
 
-    await _firestore.collection('users').doc(user.uid).update({'theme': theme});
-    await loadUserTheme(); // refresh immediately
+  Future<void> updateTheme(String theme) async {
+    final u = _auth.currentUser;
+    if (u == null) return;
+    // 1) apply immediately (instant UI change)
+    _apply(theme);
+    // 2) persist
+    await _fs.collection('users').doc(u.uid).update({'theme': theme});
   }
 }
