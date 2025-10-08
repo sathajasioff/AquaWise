@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:watermeter/screens/AI/AItips.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:watermeter/screens/AI/AItips.dart';
 import 'package:watermeter/screens/Login/login.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,12 +13,22 @@ Future<void> main() async {
   // Load .env
   await dotenv.load(fileName: ".env");
 
-  // Initialize Gemini
-  final apiKey = dotenv.env['GEMINI_API_KEY'];
-  if (apiKey == null || apiKey.isEmpty) {
-    throw Exception('GEMINI_API_KEY is missing');
+  // Get keys
+  final geminiKey = dotenv.env['GEMINI_API_KEY'];
+  final weatherKey = dotenv.env['OPENWEATHER_API_KEY'];
+
+  if (geminiKey == null || geminiKey.isEmpty) {
+    throw Exception('❌ GEMINI_API_KEY missing in .env');
   }
-  await Gemini.init(apiKey: apiKey);
+  if (weatherKey == null || weatherKey.isEmpty) {
+    throw Exception('❌ OPENWEATHER_API_KEY missing in .env');
+  }
+
+  // Initialize Gemini
+  await Gemini.init(apiKey: geminiKey);
+  print('✅ Gemini initialized successfully');
+  print('🌤 OpenWeather Key: ${weatherKey.substring(0, 4)}****');
+  print('🤖 Gemini Key: ${geminiKey.substring(0, 4)}****');
 
   runApp(const MyApp());
 }
@@ -37,17 +46,19 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const AuthWrapper(),
+      routes: {
+        '/aitips': (context) => const AIPersonalizationPage(),
+      },
     );
   }
 }
 
-/// Checks if user is logged in and navigates accordingly
+/// Checks user login
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
   Future<bool> _isLoggedIn() async {
-    final user = FirebaseAuth.instance.currentUser;
-    return user != null;
+    return FirebaseAuth.instance.currentUser != null;
   }
 
   @override
@@ -56,7 +67,9 @@ class AuthWrapper extends StatelessWidget {
       future: _isLoggedIn(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         return snapshot.data! ? const AIPersonalizationPage() : const LoginPage();
       },
