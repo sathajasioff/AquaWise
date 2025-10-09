@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:watermeter/services/remote_config_service.dart';
 import 'package:watermeter/screens/Home/dashboard_1.dart';
 import 'package:watermeter/screens/Profile/profile.dart';
+import 'package:watermeter/widgets/dashboard_navbar.dart'; // Import your custom navbar
 
 class AIPersonalizationPage extends StatefulWidget {
   const AIPersonalizationPage({super.key});
@@ -25,7 +26,7 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
   String? errorMessage;
   List<Map<String, String>> tips = [];
   double _simulatedHarvest = 0.0;
-  int _selectedIndex = 2;
+  int _selectedIndex = 2; // Set to 2 for Tips page
   bool _isSimulating = false;
   bool _geminiInitialized = false;
 
@@ -273,18 +274,42 @@ Make the tips practical and relevant to daily life.
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Tip Applied!'),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle, color: Colors.green, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Tip Applied!',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A2B47),
+                ),
+              ),
             ],
           ),
-          content: Text('"$tipTitle" has been applied for today! ✅'),
+          content: Text(
+            '"$tipTitle" has been applied for today! ✅',
+            style: GoogleFonts.poppins(fontSize: 14),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+              child: Text(
+                'OK',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF2D7DD2),
+                ),
+              ),
             ),
           ],
         ),
@@ -292,7 +317,12 @@ Make the tips practical and relevant to daily life.
     } catch (e) {
       print('Error applying tip: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error applying tip. Please try again.')),
+        SnackBar(
+          content: Text('Error applying tip. Please try again.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     }
   }
@@ -305,7 +335,12 @@ Make the tips practical and relevant to daily life.
       final roofArea = double.tryParse(_roofController.text);
       if (roofArea == null || roofArea <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a valid roof area.')),
+          SnackBar(
+            content: Text('Please enter a valid roof area.'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
         return;
       }
@@ -315,7 +350,12 @@ Make the tips practical and relevant to daily life.
       if (apiKey == null || apiKey.isEmpty) {
         print('Error: OPENWEATHER_API_KEY is missing.');
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Weather service unavailable.')),
+          SnackBar(
+            content: Text('Weather service unavailable.'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
         return;
       }
@@ -341,18 +381,31 @@ Make the tips practical and relevant to daily life.
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  'Estimated Rainwater Harvest: ${estimatedHarvest.toStringAsFixed(2)} L')),
+            content: Text('Estimated Rainwater Harvest: ${estimatedHarvest.toStringAsFixed(2)} L'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Weather data unavailable (${response.statusCode})')),
+          SnackBar(
+            content: Text('Weather data unavailable (${response.statusCode})'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
       }
     } catch (e) {
       print('Simulation error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Simulation service unavailable.')),
+        SnackBar(
+          content: Text('Simulation service unavailable.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       setState(() => _isSimulating = false);
@@ -371,6 +424,7 @@ Make the tips practical and relevant to daily life.
       case 3:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
         break;
+      // Add other cases as needed for your navigation structure
     }
   }
 
@@ -378,11 +432,11 @@ Make the tips practical and relevant to daily life.
   Color _getDifficultyColor(String label) {
     switch (label.toLowerCase()) {
       case 'easy':
-        return Colors.green;
+        return const Color(0xFF00B894);
       case 'medium':
-        return Colors.orange;
+        return const Color(0xFFFF9A3D);
       case 'hard':
-        return Colors.red;
+        return const Color(0xFFFF6B6B);
       default:
         return Colors.grey;
     }
@@ -390,31 +444,28 @@ Make the tips practical and relevant to daily life.
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAFD),
       body: SafeArea(
         child: Column(
           children: [
             // Header
-            _buildHeader(theme, screenWidth),
+            _buildHeader(),
             
             // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildPersonaCard(theme, screenWidth),
-                    const SizedBox(height: 24),
-                    _buildAITipsSection(theme, screenWidth),
-                    const SizedBox(height: 24),
-                    _buildSimulatorCard(theme, screenWidth),
-                    const SizedBox(height: 24),
-                    _buildFootprintCard(theme, screenWidth),
-                    const SizedBox(height: 80),
+                    _buildPersonaCard(),
+                    const SizedBox(height: 20),
+                    _buildAITipsSection(),
+                    const SizedBox(height: 20),
+                    _buildSimulatorCard(),
+                    const SizedBox(height: 20),
+                    _buildFootprintCard(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -422,22 +473,30 @@ Make the tips practical and relevant to daily life.
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(theme),
+      // REPLACED: Using your custom DashboardNavBar instead of the built-in BottomNavigationBar
+      bottomNavigationBar: DashboardNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavItemTapped,
+      ),
     );
   }
 
   /// Header with title and refresh button
-  Widget _buildHeader(ThemeData theme, double screenWidth) {
+  Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2D7DD2), Color(0xFF1A5FA6)],
+        ),
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -446,23 +505,43 @@ Make the tips practical and relevant to daily life.
           children: [
             IconButton(
               onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 8),
-            Text(
-              "Water Saving Tips",
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "AI Water Saving Tips",
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Personalized conservation strategies",
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
             if (!isLoading && _geminiInitialized)
-              IconButton(
-                onPressed: () => _generateAITips(userPersona!),
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                tooltip: 'Refresh Tips',
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: () => _generateAITips(userPersona!),
+                  icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                  tooltip: 'Refresh Tips',
+                ),
               ),
           ],
         ),
@@ -471,149 +550,208 @@ Make the tips practical and relevant to daily life.
   }
 
   /// Persona Card
-  Widget _buildPersonaCard(ThemeData theme, double screenWidth) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.person, color: theme.colorScheme.primary, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  "Your Water Profile",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (isLoading)
-              const LinearProgressIndicator()
-            else
+  Widget _buildPersonaCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  color: const Color(0xFF2D7DD2).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userPersona ?? 'Casual User',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                          Text(
-                            _geminiInitialized 
-                                ? "AI-powered personalized tips"
-                                : "Standard water-saving tips",
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      _geminiInitialized ? Icons.auto_awesome : Icons.lightbulb_outline,
-                      color: theme.colorScheme.primary
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.person_outline,
+                  color: Color(0xFF2D7DD2),
+                  size: 24,
                 ),
               ),
-          ],
-        ),
+              const SizedBox(width: 12),
+              Text(
+                "Your Water Profile",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A2B47),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (isLoading)
+            const LinearProgressIndicator(
+              color: Color(0xFF2D7DD2),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F7FF),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF2D7DD2).withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userPersona ?? 'Casual User',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2D7DD2),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _geminiInitialized 
+                              ? "AI-powered personalized tips"
+                              : "Standard water-saving tips",
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _geminiInitialized 
+                          ? const Color(0xFF764BA2).withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _geminiInitialized ? Icons.auto_awesome : Icons.lightbulb_outline,
+                      color: _geminiInitialized ? const Color(0xFF764BA2) : Colors.grey,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
 
   /// AI Tips Section
-  Widget _buildAITipsSection(ThemeData theme, double screenWidth) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.lightbulb_outline, color: theme.colorScheme.primary, size: 24),
-            const SizedBox(width: 12),
-            Text(
-              _geminiInitialized ? "AI Personalized Tips" : "Water Saving Tips",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const Spacer(),
-            if (isGeneratingTips)
-              const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _geminiInitialized 
-              ? "Tips for ${userPersona ?? 'your profile'}"
-              : "Practical water conservation methods",
-          style: GoogleFonts.poppins(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
-        ),
-        if (errorMessage != null) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info, color: Colors.orange[800]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    errorMessage!,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.orange[800],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+  Widget _buildAITipsSection() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
-        const SizedBox(height: 16),
-        if (isLoading)
-          _buildLoadingTips()
-        else if (tips.isEmpty)
-          _buildEmptyTipsState(theme)
-        else
-          ...tips.map((tip) => _buildTipCard(tip, theme)),
-      ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF9A3D).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.lightbulb_outline,
+                  color: Color(0xFFFF9A3D),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _geminiInitialized ? "AI Personalized Tips" : "Water Saving Tips",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1A2B47),
+                  ),
+                ),
+              ),
+              if (isGeneratingTips)
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF2D7DD2)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _geminiInitialized 
+                ? "Tips for ${userPersona ?? 'your profile'}"
+                : "Practical water conservation methods",
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      errorMessage!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          if (isLoading)
+            _buildLoadingTips()
+          else if (tips.isEmpty)
+            _buildEmptyTipsState()
+          else
+            ...tips.map((tip) => _buildTipCard(tip)),
+        ],
+      ),
     );
   }
 
@@ -621,12 +759,50 @@ Make the tips practical and relevant to daily life.
   Widget _buildLoadingTips() {
     return Column(
       children: List.generate(3, (index) => 
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: const ListTile(
-            leading: CircleAvatar(backgroundColor: Colors.grey),
-            title: Text("Loading tips...", style: TextStyle(color: Colors.grey)),
-            subtitle: Text("Please wait while we generate recommendations", style: TextStyle(color: Colors.grey)),
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 120,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -634,303 +810,413 @@ Make the tips practical and relevant to daily life.
   }
 
   /// Empty tips state
-  Widget _buildEmptyTipsState(ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          children: [
-            Icon(Icons.water_drop, size: 64, color: theme.colorScheme.primary.withOpacity(0.5)),
-            const SizedBox(height: 16),
-            Text(
-              "Tips Loading",
+  Widget _buildEmptyTipsState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.water_drop_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text(
+            "Tips Loading",
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "We're preparing your water-saving recommendations",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => _generateAITips(userPersona!),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2D7DD2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text(
+              'Try Again',
               style: GoogleFonts.poppins(
-                fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              "We're preparing your water-saving recommendations",
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => _generateAITips(userPersona!),
-              child: const Text('Try Again'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   /// Individual tip card
-  Widget _buildTipCard(Map<String, String> tip, ThemeData theme) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    _geminiInitialized ? Icons.auto_awesome : Icons.eco,
-                    color: theme.colorScheme.primary,
-                    size: 20
-                  ),
+  Widget _buildTipCard(Map<String, String> tip) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _geminiInitialized 
+                      ? const Color(0xFF764BA2).withOpacity(0.1)
+                      : const Color(0xFF2D7DD2).withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tip['title']!,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
+                child: Icon(
+                  _geminiInitialized ? Icons.auto_awesome : Icons.eco,
+                  color: _geminiInitialized ? const Color(0xFF764BA2) : const Color(0xFF2D7DD2),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tip['title']!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1A2B47),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        tip['description']!,
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          color: Colors.grey[700],
-                        ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      tip['description']!,
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                        height: 1.4,
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getDifficultyColor(tip['label']!).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: _getDifficultyColor(tip['label']!).withOpacity(0.3)),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _getDifficultyColor(tip['label']!).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: _getDifficultyColor(tip['label']!).withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            tip['label']!.toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: _getDifficultyColor(tip['label']!),
+                              letterSpacing: 0.5,
                             ),
-                            child: Text(
-                              tip['label']!.toUpperCase(),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.water_drop, size: 16, color: const Color(0xFF2D7DD2)),
+                            const SizedBox(width: 4),
+                            Text(
+                              tip['saving']!,
                               style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: _getDifficultyColor(tip['label']!),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF2D7DD2),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.water_drop, size: 16, color: Colors.blue),
-                          const SizedBox(width: 4),
-                          Text(
-                            tip['saving']!,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => _applyTipToFirestore(tip['title']!),
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: Text(
-                  "Apply Today",
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Rainwater Harvesting Simulator
-  Widget _buildSimulatorCard(ThemeData theme, double screenWidth) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.cloud, color: theme.colorScheme.primary, size: 24),
-                const SizedBox(width: 10),
-                Text(
-                  "Rainwater Harvesting Simulator",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _roofController,
-              decoration: InputDecoration(
-                labelText: "Roof Area (m²)",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.square_foot),
-                hintText: "Enter your roof area",
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: "Location",
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.location_on),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _location,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(value: "Colombo", child: Text("Colombo")),
-                    DropdownMenuItem(value: "Kandy", child: Text("Kandy")),
-                    DropdownMenuItem(value: "Jaffna", child: Text("Jaffna")),
-                  ],
-                  onChanged: (v) => setState(() => _location = v!),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _isSimulating ? null : _simulateHarvest,
-                style: FilledButton.styleFrom(
-                  backgroundColor: theme.colorScheme.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSimulating
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(
-                        "Simulate Harvest",
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          ],
                         ),
-                      ),
-              ),
-            ),
-            if (_simulatedHarvest > 0) ...[
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.water_drop, color: Colors.blue, size: 32),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Estimated Harvest",
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          Text(
-                            "${_simulatedHarvest.toStringAsFixed(2)} Liters",
-                            style: GoogleFonts.poppins(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _applyTipToFirestore(tip['title']!),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D7DD2),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                elevation: 0,
+              ),
+              child: Text(
+                "Apply Today",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Rainwater Harvesting Simulator
+  Widget _buildSimulatorCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00B894).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.cloud_outlined,
+                  color: Color(0xFF00B894),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "Rainwater Harvesting Simulator",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A2B47),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _roofController,
+            decoration: InputDecoration(
+              labelText: "Roof Area (m²)",
+              labelStyle: GoogleFonts.poppins(color: const Color.fromARGB(255, 152, 87, 87)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF2D7DD2), width: 2),
+              ),
+              prefixIcon: const Icon(Icons.square_foot, color: Color(0xFF2D7DD2)),
+              hintText: "Enter your roof area",
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _location,
+                isExpanded: true,
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2D7DD2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+                ),
+                items: const [
+                  DropdownMenuItem(value: "Colombo", child: Text("Colombo")),
+                  DropdownMenuItem(value: "Kandy", child: Text("Kandy")),
+                  DropdownMenuItem(value: "Jaffna", child: Text("Jaffna")),
+                ],
+                onChanged: (v) => setState(() => _location = v!),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _isSimulating ? null : _simulateHarvest,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2D7DD2),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+              ),
+              child: _isSimulating
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.play_arrow_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Simulate Harvest",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+          if (_simulatedHarvest > 0) ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF00B894), Color(0xFF00A085)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.water_drop, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Estimated Harvest",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                        Text(
+                          "${_simulatedHarvest.toStringAsFixed(2)} Liters",
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 
   /// Water Footprint Card
-  Widget _buildFootprintCard(ThemeData theme, double screenWidth) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.analytics, color: theme.colorScheme.primary, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  "Water Footprint Facts",
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.primary,
-                  ),
+  Widget _buildFootprintCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF764BA2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildFootprintItem("1 Cup Coffee", "140L", Icons.coffee),
-            _buildFootprintItem("1 Cotton T-Shirt", "2,700L", Icons.face),
-            _buildFootprintItem("1 Sheet Paper", "10L", Icons.description),
-            _buildFootprintItem("1 Glass Milk", "200L", Icons.local_drink),
-          ],
-        ),
+                child: const Icon(
+                  Icons.analytics_outlined,
+                  color: Color(0xFF764BA2),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "Water Footprint Facts",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1A2B47),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildFootprintItem("1 Cup Coffee", "140L", Icons.coffee),
+          _buildFootprintItem("1 Cotton T-Shirt", "2,700L", Icons.face_retouching_natural),
+          _buildFootprintItem("1 Sheet Paper", "10L", Icons.description),
+          _buildFootprintItem("1 Glass Milk", "200L", Icons.local_drink),
+        ],
       ),
     );
   }
@@ -939,15 +1225,22 @@ Make the tips practical and relevant to daily life.
   Widget _buildFootprintItem(String item, String amount, IconData icon) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.blue, size: 20),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2D7DD2).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: const Color(0xFF2D7DD2), size: 20),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -955,73 +1248,26 @@ Make the tips practical and relevant to daily life.
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: const Color(0xFF1A2B47),
               ),
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
+              color: const Color(0xFF2D7DD2).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               amount,
               style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.blue,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF2D7DD2),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Bottom Navigation Bar
-  Widget _buildBottomNavigationBar(ThemeData theme) {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        selectedItemColor: theme.colorScheme.primary,
-        unselectedItemColor: Colors.grey[600],
-        selectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500),
-        unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w400),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.water_drop_outlined),
-            activeIcon: Icon(Icons.water_drop),
-            label: 'Track',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.lightbulb_outline),
-            activeIcon: Icon(Icons.lightbulb),
-            label: 'Tips',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-        onTap: _onNavItemTapped,
       ),
     );
   }

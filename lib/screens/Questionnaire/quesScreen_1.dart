@@ -151,7 +151,7 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pushReplacementNamed(context, '/dashboard1');
+        Navigator.pushReplacementNamed(context, '/dashboard');
       }
     }
   }
