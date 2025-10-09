@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
 
     // Navigate only if login worked
     if (_user != null) {
-      Navigator.pushReplacementNamed(context, '/dashboard1');
+      Navigator.pushReplacementNamed(context, '/aitips');
     }
 
   } on FirebaseAuthException catch (e) {
