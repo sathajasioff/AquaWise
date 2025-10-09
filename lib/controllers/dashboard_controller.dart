@@ -106,4 +106,6 @@ class DashboardController {
   }
 
   Future getMonthlyTotal() async {}
+
+  Future getUsageHistory() async {}
 }

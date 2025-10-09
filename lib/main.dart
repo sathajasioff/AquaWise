@@ -4,6 +4,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_gemini/flutter_gemini.dart';
 import 'package:provider/provider.dart';
 import 'package:watermeter/controllers/theme_controller.dart';
+import 'package:watermeter/screens/AI/AItipOP.dart';
+import 'package:watermeter/screens/AI/AItips.dart';
 import 'package:watermeter/screens/About/about.dart';
 import 'package:watermeter/screens/Login/login.dart';
 import 'package:watermeter/screens/Home/dashboard_view.dart';
@@ -59,6 +61,8 @@ class MyApp extends StatelessWidget {
         '/edit_profile': (context) => const EditProfilePage(),
         '/privacy_policy' : (context) => const PrivacyPolicyPage(),
         '/about' : (context) => const AboutPage(),
+        '/aitips' : (context) => const AIPersonalizationPage(),
+        // '/report' : (context) => const ReportGeneratorPage(),
         
       },
     );

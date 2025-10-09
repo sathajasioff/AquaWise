@@ -52,7 +52,11 @@ dependencies:
   firebase_storage: ^12.4.10
   image_picker: ^1.1.2
   provider: ^6.1.2
-  
+  # syncfusion_flutter_pdf: ^23.1.44
+  # syncfusion_flutter_datepicker: ^23.1.44
+  # path_provider: ^2.1.1
+  # open_file: ^3.3.3
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:
@@ -63,7 +67,6 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-  assets:
     - assets/images/
 
 # flutter:
