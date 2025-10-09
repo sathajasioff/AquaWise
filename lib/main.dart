@@ -135,6 +135,7 @@ import 'package:watermeter/controllers/theme_controller.dart';
 import 'package:watermeter/screens/AI/AItipOP.dart';
 import 'package:watermeter/screens/AI/AItips.dart';
 import 'package:watermeter/screens/About/about.dart';
+import 'package:watermeter/screens/ForgotPassword/forgotPassword.dart';
 import 'package:watermeter/screens/Login/login.dart';
 import 'package:watermeter/screens/Home/dashboard_view.dart';
 import 'package:watermeter/screens/Privacy/privacy.dart';
@@ -202,6 +203,7 @@ class MyApp extends StatelessWidget {
         '/about': (context) => const AboutPage(),
         '/aitips': (context) => const AIPersonalizationPage(),
         // '/report' : (context) => const ReportGeneratorPage(),
+        '/forgot_password': (context) => const ForgotPasswordPage(),
       },
     );
   }

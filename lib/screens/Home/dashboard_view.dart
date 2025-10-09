@@ -165,7 +165,7 @@ class _DashboardViewState extends State<DashboardView> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1A2B47),
         title: Text(
-          "Welcome, ${currentUser?.name ?? 'User'}",
+          "Welcome, ${currentUser?.username ?? 'username'}",
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 20,
