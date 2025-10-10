@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:watermeter/screens/AI/AItips.dart';
+import 'package:watermeter/screens/Gamification/gamification.dart';
+import 'package:watermeter/widgets/active_challenge.dart';
 import 'package:watermeter/widgets/dashboard_navbar.dart';
 import '../../controllers/dashboard_controller.dart';
 import '../../models/user.dart';
@@ -14,6 +16,9 @@ import '../Home/eco_dashboard.dart';
 import '../Home/family_dashboard.dart';
 import '../Home/budget_dashboard.dart';
 import '../Home/student_dashboard.dart';
+
+// Gamification screen import
+import '../Gamification/gamification.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({Key? key}) : super(key: key);
@@ -63,7 +68,7 @@ class _DashboardViewState extends State<DashboardView> {
     _timer?.cancel();
     setState(() => _isTiming = false);
     final liters = (_seconds / 60) * 10;
-    await _controller.logWaterUsage(_activity, liters);
+    await _controller.stopTimerAndCheckChallenges(_activity, _seconds, liters);
     _loadMonthlyData();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -129,6 +134,14 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 
+  // Navigation to Gamification page
+  void _navigateToGamification() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const GamificationScreen()),
+    );
+  }
+
   Widget _personaSection(String persona) {
     final type = persona.toLowerCase();
     if (type.contains('eco')) {
@@ -165,7 +178,7 @@ class _DashboardViewState extends State<DashboardView> {
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF1A2B47),
         title: Text(
-          "Welcome, ${currentUser?.username ?? 'username'}",
+          "Welcome, ${currentUser?.username ?? 'User'}",
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 20,
@@ -415,7 +428,71 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 20),
 
-          
+          // Gamification Card
+          GestureDetector(
+            onTap: _navigateToGamification,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFF9A00), Color(0xFFFF6B00)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.emoji_events, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Water Saving Game",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          "Earn points and unlock achievements",
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
           // Budget card
           GestureDetector(
             onTap: _setBudget,
@@ -760,7 +837,51 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 28),
 
-          // Report Generator Card - NEW ADDITION
+          // In your dashboard_view.dart, add this after the persona section:
+
+// Active Challenges Widget
+const SizedBox(height: 20),
+Container(
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(20),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.grey.withOpacity(0.1),
+        blurRadius: 15,
+        offset: const Offset(0, 6),
+      ),
+    ],
+    border: Border.all(color: Colors.grey.shade100),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        "Active Challenges",
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1A2B47),
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        "Track and complete your ongoing water-saving challenges",
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 14,
+        ),
+      ),
+      const SizedBox(height: 16),
+      ActiveChallengesWidget(), // Add the widget here
+    ],
+  ),
+),
+const SizedBox(height: 20),
+
+          // Report Generator Card
           GestureDetector(
             onTap: _navigateToReportGenerator,
             child: Container(
@@ -825,7 +946,6 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 20),
 
-
           // Persona dashboard section
           _personaSection(currentUser!.persona ?? 'casual'),
           const SizedBox(height: 20),
@@ -835,7 +955,7 @@ class _DashboardViewState extends State<DashboardView> {
   }
 }
 
-// Placeholder for Report Generator Page - Replace with your actual implementation
+// Placeholder for Report Generator Page
 class ReportGeneratorPage extends StatelessWidget {
   const ReportGeneratorPage({super.key});
 
@@ -859,4 +979,3 @@ class ReportGeneratorPage extends StatelessWidget {
     );
   }
 }
-
