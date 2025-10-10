@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../models/challenge.dart';
 import '../../models/reward.dart';
 import '../../models/leaderboard_entry.dart';
@@ -14,17 +15,17 @@ class GamificationScreen extends StatefulWidget {
 
 class _GamificationScreenState extends State<GamificationScreen> {
   // --- User meta ---
-  int userPoints = 320;           // your current points
+  int userPoints = 320;
   int level = 3;
-  double xpProgress = 0.55;       // 0..1
+  double xpProgress = 0.55;
   int streakDays = 6;
 
-  // --- Demo data (replace with Firestore later) ---
+  // --- Demo data ---
   List<Challenge> challenges = const [
     Challenge(
       id: "c1",
       title: "5-Minute Shower",
-      description: "Limit daily showers to 5 minutes.",
+      description: "Limit daily showers to 5 minutes to save water",
       goalLiters: 200,
       currentLiters: 120,
       rewardPoints: 60,
@@ -33,7 +34,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
     Challenge(
       id: "c2",
       title: "Fix a Leak",
-      description: "Find and fix any leaking tap at home.",
+      description: "Find and fix any leaking tap at home",
       goalLiters: 100,
       currentLiters: 0,
       rewardPoints: 100,
@@ -42,7 +43,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
     Challenge(
       id: "c3",
       title: "Weekly Saver",
-      description: "Save 500L of water this week.",
+      description: "Save 500L of water this week",
       goalLiters: 500,
       currentLiters: 410,
       rewardPoints: 150,
@@ -61,8 +62,8 @@ class _GamificationScreenState extends State<GamificationScreen> {
   final List<Reward> rewards = const [
     Reward(
       id: "r1",
-      title: "10% Off – Water Filter",
-      description: "Voucher for eco water filter",
+      title: "Water Filter Discount",
+      description: "10% off eco-friendly water filter",
       costPoints: 250,
       image: "https://picsum.photos/seed/filter/300/200",
     ),
@@ -76,14 +77,14 @@ class _GamificationScreenState extends State<GamificationScreen> {
     Reward(
       id: "r3",
       title: "Reusable Bottle",
-      description: "Stainless steel bottle",
+      description: "Premium stainless steel water bottle",
       costPoints: 450,
       image: "https://picsum.photos/seed/bottle/300/200",
     ),
     Reward(
       id: "r4",
-      title: "Community Badge",
-      description: "Special badge in your profile",
+      title: "Eco Warrior Badge",
+      description: "Special badge for your profile",
       costPoints: 150,
       image: "https://picsum.photos/seed/badge/300/200",
     ),
@@ -96,6 +97,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         c.id == id ? c.copyWith(joined: true) : c
       ).toList();
     });
+    _showSnackBar("Challenge joined! Start saving water 💧");
   }
 
   void _leaveChallenge(String id) {
@@ -104,6 +106,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         c.id == id ? c.copyWith(joined: false) : c
       ).toList();
     });
+    _showSnackBar("Challenge left");
   }
 
   void _logTenLiters(String id) {
@@ -112,9 +115,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         if (c.id != id) return c;
         final updated = c.copyWith(currentLiters: c.currentLiters + 10);
         if (updated.completed) {
-          // award points once it crosses the goal
           userPoints += updated.rewardPoints;
-          // bump XP a little
           xpProgress += 0.1;
           if (xpProgress >= 1) {
             level += 1;
@@ -126,19 +127,26 @@ class _GamificationScreenState extends State<GamificationScreen> {
         return updated;
       }).toList();
     });
+    _showSnackBar("+10L logged! Keep going 🌟");
   }
 
   void _redeemReward(Reward reward) {
-    if (userPoints < reward.costPoints) return;
+    if (userPoints < reward.costPoints) {
+      _showSnackBar("Not enough points! Need ${reward.costPoints - userPoints} more");
+      return;
+    }
     setState(() => userPoints -= reward.costPoints);
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text("Redeemed 🎉"),
-        content: Text("You redeemed “${reward.title}”."),
+        content: Text("You redeemed \"${reward.title}\"."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
         ],
       ),
     );
@@ -148,11 +156,14 @@ class _GamificationScreenState extends State<GamificationScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text("Challenge Completed"),
         content: Text("Great job! You earned +$pts points."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Nice")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Nice"),
+          ),
         ],
       ),
     );
@@ -162,36 +173,82 @@ class _GamificationScreenState extends State<GamificationScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text("Level Up!"),
         content: Text("Welcome to Level $level 🔥"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          ),
         ],
       ),
     );
   }
 
-  // --- UI ---
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color.fromARGB(255, 23, 110, 210),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        backgroundColor: Colors.white,
         appBar: AppBar(
-          title: const Text("Gamification"),
+          title: const Text(
+            "Eco Challenges",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           centerTitle: true,
-          backgroundColor: const Color(0xFF176ED2),
-          foregroundColor: Colors.white,
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
           elevation: 0,
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: "Challenges"),
-              Tab(text: "Leaderboard"),
-              Tab(text: "Rewards"),
+              Tab(
+                child: Text(
+                  "Challenges",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+              Tab(
+                child: Text(
+                  "Leaderboard",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
+              Tab(
+                child: Text(
+                  "Rewards",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ),
             ],
-            indicatorColor: Colors.white,
+            indicatorColor: const Color.fromARGB(255, 23, 110, 210),
+            indicatorWeight: 3,
+            labelPadding: const EdgeInsets.symmetric(vertical: 12),
           ),
         ),
         body: TabBarView(
@@ -205,139 +262,164 @@ class _GamificationScreenState extends State<GamificationScreen> {
     );
   }
 
-  // Top header (shared) – points, level, XP, streak
   Widget _header() {
-    return Column(
-      children: [
-        // Points & XP
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          padding: const EdgeInsets.all(16),
-          child: Row(
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
             children: [
+              // Level Progress
               Stack(
                 alignment: Alignment.center,
                 children: [
                   SizedBox(
-                    width: 72,
-                    height: 72,
+                    width: 60,
+                    height: 60,
                     child: CircularProgressIndicator(
                       value: xpProgress,
-                      strokeWidth: 8,
-                      backgroundColor: Colors.grey.shade300,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                      strokeWidth: 4,
+                      backgroundColor: Colors.grey[300],
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 23, 110, 210)),
                     ),
                   ),
-                  Text("Lv $level", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Column(
+                    children: [
+                      Text(
+                        "Lv $level",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        "${(xpProgress * 100).toInt()}%",
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(width: 16),
+              // User Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Eco Saver", style: TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    Text("XP: ${(xpProgress * 100).toInt()}%"),
+                    const Text(
+                      "Water Saver",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Eco Warrior",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.bolt, color: Colors.amber[600], size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          "$userPoints Points",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Color.fromARGB(255, 23, 110, 210),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
+              // Streak
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF176ED2).withOpacity(0.08),
+                  color: const Color.fromARGB(255, 23, 110, 210).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  "$userPoints pts",
-                  style: const TextStyle(
-                    color: Color(0xFF176ED2),
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: Row(
+                  children: [
+                    Icon(Icons.local_fire_department, color: Colors.orange[600], size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      "$streakDays days",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        // Streak
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.teal.shade100,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text("🔥 $streakDays-day streak — keep saving!",
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildChallengesTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          _header(),
           const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text("Active Challenges",
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
+          // Progress Bar
+          LinearProgressIndicator(
+            value: xpProgress,
+            backgroundColor: Colors.grey[300],
+            valueColor: const AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 23, 110, 210)),
+            borderRadius: BorderRadius.circular(4),
           ),
-          const SizedBox(height: 12),
-          for (final c in challenges)
-            ChallengeCard(
-              challenge: c,
-              onJoin: () => _joinChallenge(c.id),
-              onLeave: () => _leaveChallenge(c.id),
-              onLog10L: () => _logTenLiters(c.id),
-            ),
         ],
       ),
     );
   }
 
-  Widget _buildLeaderboardTab() {
+  Widget _buildChallengesTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           _header(),
-          const SizedBox(height: 16),
-          Align(
+          const SizedBox(height: 24),
+          // Section Header
+          const Align(
             alignment: Alignment.centerLeft,
-            child: Text("Community Leaderboard",
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
+            child: Text(
+              "Active Challenges",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          // Challenges List
           Column(
-            children: leaderboard.map((e) {
-              return Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 1,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: e.isYou ? Colors.green : const Color(0xFF176ED2),
-                    child: Text(e.rank.toString(),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                  title: Text(
-                    e.name,
-                    style: TextStyle(fontWeight: e.isYou ? FontWeight.w700 : FontWeight.w500),
-                  ),
-                  trailing: Text("${e.points} pts",
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF176ED2),
-                      )),
+            children: challenges.map((challenge) {
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ChallengeCard(
+                  challenge: challenge,
+                  onJoin: () => _joinChallenge(challenge.id),
+                  onLeave: () => _leaveChallenge(challenge.id),
+                  onLog10L: () => _logTenLiters(challenge.id),
                 ),
               );
             }).toList(),
@@ -347,39 +429,148 @@ class _GamificationScreenState extends State<GamificationScreen> {
     );
   }
 
-  Widget _buildRewardsTab() {
+  Widget _buildLeaderboardTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
           _header(),
-          const SizedBox(height: 16),
-          Align(
+          const SizedBox(height: 24),
+          // Section Header
+          const Align(
             alignment: Alignment.centerLeft,
-            child: Text("Redeem Rewards",
-                style: Theme.of(context).textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: 12),
-
-          // Grid of rewards
-          GridView.builder(
-            shrinkWrap: true,
-            itemCount: rewards.length,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisExtent: 210,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+            child: Text(
+              "Community Leaderboard",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
-            itemBuilder: (_, i) => RewardCard(
-              reward: rewards[i],
-              userPoints: userPoints,
-              onRedeem: () => _redeemReward(rewards[i]),
+          ),
+          const SizedBox(height: 16),
+          // Leaderboard List
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Column(
+              children: leaderboard.map((entry) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: entry.isYou ? const Color.fromARGB(255, 23, 110, 210).withOpacity(0.05) : Colors.transparent,
+                    border: Border(
+                      bottom: entry.rank != leaderboard.length 
+                          ? BorderSide(color: Colors.grey[300]!) 
+                          : BorderSide.none,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Rank
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: _getRankColor(entry.rank),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            entry.rank.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Name
+                      Expanded(
+                        child: Text(
+                          entry.name,
+                          style: TextStyle(
+                            fontWeight: entry.isYou ? FontWeight.w600 : FontWeight.w500,
+                            color: entry.isYou ? const Color.fromARGB(255, 23, 110, 210) : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      // Points
+                      Text(
+                        "${entry.points} pts",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Color.fromARGB(255, 23, 110, 210),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildRewardsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _header(),
+          const SizedBox(height: 24),
+          // Section Header
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Available Rewards",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Rewards Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: rewards.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              mainAxisExtent: 200,
+            ),
+            itemBuilder: (context, index) => RewardCard(
+              reward: rewards[index],
+              userPoints: userPoints,
+              onRedeem: () => _redeemReward(rewards[index]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getRankColor(int rank) {
+    switch (rank) {
+      case 1:
+        return const Color(0xFFFFD700); // Gold
+      case 2:
+        return const Color(0xFFC0C0C0); // Silver
+      case 3:
+        return const Color(0xFFCD7F32); // Bronze
+      default:
+        return const Color.fromARGB(255, 23, 110, 210); // Blue
+    }
   }
 }
