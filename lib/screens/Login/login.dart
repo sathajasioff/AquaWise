@@ -50,7 +50,7 @@ class _LoginPageState extends State<LoginPage> {
 
     // Navigate only if login worked
     if (_user != null) {
-      Navigator.pushReplacementNamed(context, '/dashboard1');
+      Navigator.pushReplacementNamed(context, '/gamification');
     }
 
   } on FirebaseAuthException catch (e) {
@@ -67,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _user = user;
       });
-    Navigator.pushReplacementNamed(context, '/dashboard1');
+    Navigator.pushReplacementNamed(context, '/gamification');
 
     ScaffoldMessenger.of(context).showSnackBar(
        SnackBar(content: Text(" Logged in with Google")),

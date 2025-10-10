@@ -42,6 +42,9 @@ dependencies:
   google_maps_flutter: ^2.5.0
   google_maps_flutter_web: ^0.5.7
   url_launcher: ^6.3.2
+  
+  # If you also need Firebase Core (required)
+  
 
 dev_dependencies:
   flutter_test:
