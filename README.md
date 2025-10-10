@@ -9,3 +9,7 @@ all the api configurations are kept in api.dart file
 
 
 note - cant able to get the images when i run url its not working also
+
+GEMINI_API_KEY=AIzaSyDqJb9WqzkqPju5JcKCIw13Lvg4OyiS89w
+OPENWEATHER_API_KEY=411d7f3e730fc949fb9f06a48a8b3d61
+
