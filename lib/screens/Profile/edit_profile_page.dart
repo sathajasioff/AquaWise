@@ -21,6 +21,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   File? _imageFile;
   String? _photoUrl;
   bool _isLoading = false;
+  bool _hasChanges = false;
+  String? _currentUsername; // Store the current username separately
 
   @override
   void initState() {
@@ -32,9 +34,21 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final data = await _controller.getCurrentProfile();
     if (data != null) {
       setState(() {
-        _nameController.text = data['username'] ?? '';
+        _currentUsername = data['username'] ?? '';
+        _nameController.text = _currentUsername!;
         _photoUrl = data['photoUrl'];
         _themePreference = data['theme'] ?? 'system';
+      });
+    }
+  }
+
+  void _checkForChanges() {
+    final hasChanges = _imageFile != null || 
+        (_nameController.text.isNotEmpty && _nameController.text != _currentUsername);
+    
+    if (hasChanges != _hasChanges) {
+      setState(() {
+        _hasChanges = hasChanges;
       });
     }
   }
@@ -83,7 +97,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       imageQuality: 80,
                     );
                     if (picked != null) {
-                      setState(() => _imageFile = File(picked.path));
+                      setState(() {
+                        _imageFile = File(picked.path);
+                        _hasChanges = true;
+                      });
                     }
                   },
                 ),
@@ -97,7 +114,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       imageQuality: 80,
                     );
                     if (picked != null) {
-                      setState(() => _imageFile = File(picked.path));
+                      setState(() {
+                        _imageFile = File(picked.path);
+                        _hasChanges = true;
+                      });
                     }
                   },
                 ),
@@ -111,7 +131,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _saveProfile() async {
-    if (_nameController.text.trim().isEmpty) {
+    final username = _nameController.text.trim();
+    
+    if (username.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -132,38 +154,63 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       String? uploadedUrl = _photoUrl;
+      
+      // Upload new image if selected
       if (_imageFile != null) {
+        print("🔄 Uploading new profile photo...");
         uploadedUrl = await _controller.uploadProfilePhoto(_imageFile!);
+        if (uploadedUrl == null) {
+          throw Exception("Failed to upload profile photo");
+        }
+        print("✅ Profile photo uploaded: $uploadedUrl");
       }
 
-      await _controller.updateUserProfile(
-        username: _nameController.text.trim(),
+      // Update profile in Firestore
+      print("🔄 Updating user profile...");
+      final success = await _controller.updateUserProfile(
+        username: username,
         photoUrl: uploadedUrl,
         themePreference: _themePreference,
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Profile updated successfully!",
-              style: GoogleFonts.poppins(),
+      if (success) {
+        print("✅ Profile updated successfully!");
+        
+        // Update the current username immediately to prevent flicker
+        setState(() {
+          _currentUsername = username;
+          _hasChanges = false;
+        });
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Profile updated successfully!",
+                style: GoogleFonts.poppins(),
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-        Navigator.pop(context);
+          );
+          
+          // Wait a bit before navigating to ensure Firestore update is complete
+          await Future.delayed(const Duration(milliseconds: 500));
+          Navigator.pop(context);
+        }
+      } else {
+        throw Exception("Failed to update profile in database");
       }
     } catch (e) {
+      print("❌ Error in _saveProfile: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "Error updating profile: $e",
+              "Error updating profile. Please try again.",
               style: GoogleFonts.poppins(),
             ),
             backgroundColor: Colors.red,
@@ -175,7 +222,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -345,6 +396,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         const SizedBox(height: 20),
                         TextFormField(
                           controller: _nameController,
+                          onChanged: (value) => _checkForChanges(),
                           decoration: InputDecoration(
                             labelText: "Full Name",
                             labelStyle: GoogleFonts.poppins(
@@ -455,9 +507,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 _buildThemeOption('system', Icons.settings_suggest_outlined, "System Default"),
                               ],
                               onChanged: (val) async {
-                                setState(() => _themePreference = val);
-                                await _controller.updateUserProfile(themePreference: val);
-                                // 🔥 Update UI theme instantly
+                                setState(() {
+                                  _themePreference = val;
+                                  _hasChanges = true;
+                                });
+                                // Update theme instantly
                                 if (mounted) {
                                   final themeController = Provider.of<ThemeController>(
                                     context,
@@ -478,16 +532,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _saveProfile,
+                      onPressed: _hasChanges ? _saveProfile : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2D7DD2),
+                        backgroundColor: _hasChanges ? const Color(0xFF2D7DD2) : Colors.grey,
                         foregroundColor: Colors.white,
-                        elevation: 0,
+                        elevation: _hasChanges ? 4 : 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shadowColor: Colors.blue.withOpacity(0.3),
+                        shadowColor: _hasChanges ? Colors.blue.withOpacity(0.3) : Colors.transparent,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,

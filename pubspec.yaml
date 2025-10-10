@@ -45,7 +45,7 @@ dependencies:
   google_maps_flutter_web: ^0.5.7
   url_launcher: ^6.3.2
   shared_preferences: ^2.3.0
-  flutter_gemini: ^2.0.04
+  flutter_gemini: ^2.0.5
   flutter_dotenv: ^5.1.0
   firebase_remote_config: ^5.5.0
   fl_chart: ^0.66.0
@@ -57,11 +57,15 @@ dependencies:
   # path_provider: ^2.1.1
   # open_file: ^3.3.3
   intl: ^0.18.1
+  syncfusion_flutter_charts: ^22.1.0 
+  pdf: ^3.10.2
+  printing: ^5.9.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  build_runner: ^2.4.0
 
 flutter:
   uses-material-design: true

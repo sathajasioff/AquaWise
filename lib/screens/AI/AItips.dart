@@ -10,7 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:watermeter/services/remote_config_service.dart';
 import 'package:watermeter/screens/Home/dashboard_1.dart';
 import 'package:watermeter/screens/Profile/profile.dart';
-import 'package:watermeter/widgets/dashboard_navbar.dart'; // Import your custom navbar
+import 'package:watermeter/widgets/dashboard_navbar.dart';
+import 'package:watermeter/widgets/weather_widget.dart';
 
 class AIPersonalizationPage extends StatefulWidget {
   const AIPersonalizationPage({super.key});
@@ -26,7 +27,7 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
   String? errorMessage;
   List<Map<String, String>> tips = [];
   double _simulatedHarvest = 0.0;
-  int _selectedIndex = 2; // Set to 2 for Tips page
+  int _selectedIndex = 2;
   bool _isSimulating = false;
   bool _geminiInitialized = false;
 
@@ -41,7 +42,10 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
 
   /// Initialize user persona and AI tips
   Future<void> _initializePage() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
     await RemoteConfigService().initialize();
     await _initializeGemini();
@@ -51,7 +55,6 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
       setState(() {
         errorMessage = 'User not authenticated. Please log in.';
         isLoading = false;
-        tips = _getFallbackTips();
       });
       return;
     }
@@ -63,21 +66,24 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
       if (_geminiInitialized) {
         await _generateAITips(userPersona!);
       } else {
-        tips = _getFallbackTips();
-        errorMessage = 'AI service not available. Using standard tips.';
+        setState(() {
+          errorMessage = 'AI service not available. Please check your internet connection and try again.';
+          isLoading = false;
+        });
       }
     } catch (e) {
       print('Error fetching persona: $e');
-      errorMessage = 'Error fetching persona: $e';
-      tips = _getFallbackTips();
+      setState(() {
+        errorMessage = 'Error fetching user data: $e';
+        isLoading = false;
+      });
     }
-
-    setState(() => isLoading = false);
   }
 
   /// Initialize Gemini AI
   Future<void> _initializeGemini() async {
     try {
+      await dotenv.load();
       final apiKey = dotenv.env['GEMINI_API_KEY'];
       print('Gemini API Key from env: ${apiKey != null && apiKey.isNotEmpty ? '✓ Loaded' : '✗ Missing'}');
       
@@ -87,7 +93,7 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
         return;
       }
 
-      // Validate API key format (should start with AIza)
+      // Validate API key format
       if (!apiKey.startsWith('AIza')) {
         print('Error: Invalid Gemini API key format');
         _geminiInitialized = false;
@@ -96,145 +102,173 @@ class _AIPersonalizationPageState extends State<AIPersonalizationPage> {
 
       // Initialize Gemini
       Gemini.init(apiKey: apiKey);
-      _geminiInitialized = true;
-      print('Gemini AI initialized successfully');
+      
+      // Test the connection with a simple prompt
+      final testResponse = await Gemini.instance.text('Say "Connected"').timeout(const Duration(seconds: 10));
+      if (testResponse?.output != null) {
+        _geminiInitialized = true;
+        print('Gemini AI initialized successfully');
+      } else {
+        _geminiInitialized = false;
+        print('Gemini test failed - no response');
+      }
     } catch (e) {
       print('Error initializing Gemini: $e');
       _geminiInitialized = false;
     }
   }
 
-  /// Default fallback water-saving tips
-  List<Map<String, String>> _getFallbackTips() => [
-    {
-      "title": "Short Shower",
-      "description": "Reduce shower time to 4 minutes to save water.",
-      "label": "easy",
-      "saving": "-30L/day"
-    },
-    {
-      "title": "Fix Leaky Faucets",
-      "description": "A dripping faucet can waste up to 20 gallons of water per day.",
-      "label": "medium",
-      "saving": "-75L/day"
-    },
-    {
-      "title": "Collect Rainwater",
-      "description": "Use collected rainwater for gardening and cleaning.",
-      "label": "hard",
-      "saving": "-100L/week"
-    },
-  ];
-
   /// Gemini AI - Generate personalized tips based on persona
   Future<void> _generateAITips(String persona) async {
     if (!_geminiInitialized) {
-      print('Gemini not initialized, using fallback tips');
-      setState(() => tips = _getFallbackTips());
+      setState(() {
+        errorMessage = 'AI service not available. Please check your internet connection.';
+        isLoading = false;
+      });
       return;
     }
 
-    setState(() => isGeneratingTips = true);
+    setState(() {
+      isGeneratingTips = true;
+      errorMessage = null;
+    });
     
     try {
       final gemini = Gemini.instance;
       
-      // Simple, clean prompt for Gemini
+      // Enhanced prompt for better persona-specific tips
       final prompt = '''
-As a water conservation expert, create 3 personalized water-saving tips for a "$persona".
+You are a water conservation expert. Create 3 personalized, practical water-saving tips specifically for a "$persona" user.
 
-Provide the response in this exact JSON format only:
+Consider their likely water usage patterns, lifestyle, and what would be most effective and achievable for them.
+
+For each tip, provide:
+- A clear, actionable title
+- A detailed description explaining how to implement it
+- An appropriate difficulty level (easy, medium, or hard)
+- Estimated water savings in liters
+
+Return ONLY a valid JSON array with exactly this structure:
 [
   {
-    "title": "Tip 1 title",
-    "description": "Tip 1 description",
-    "label": "easy",
-    "saving": "25L per day"
+    "title": "Specific tip title for $persona",
+    "description": "Detailed explanation of how to implement this tip and why it's effective for a $persona",
+    "label": "easy/medium/hard",
+    "saving": "XXL per day/week/month"
   },
   {
-    "title": "Tip 2 title", 
-    "description": "Tip 2 description",
-    "label": "medium",
-    "saving": "40L per day"
+    "title": "Another specific tip for $persona", 
+    "description": "Detailed explanation...",
+    "label": "easy/medium/hard",
+    "saving": "XXL per day/week/month"
   },
   {
-    "title": "Tip 3 title",
-    "description": "Tip 3 description",
-    "label": "hard", 
-    "saving": "60L per day"
+    "title": "Third specific tip for $persona",
+    "description": "Detailed explanation...",
+    "label": "easy/medium/hard", 
+    "saving": "XXL per day/week/month"
   }
 ]
 
-Make the tips practical and relevant to daily life.
+Make the tips highly relevant, practical, and tailored to a $persona's typical water usage habits.
 ''';
 
-      print("Sending request to Gemini...");
+      print("Sending request to Gemini for persona: $persona");
       
-      final response = await gemini.text(prompt).timeout(const Duration(seconds: 30));
+      final response = await gemini.text(prompt).timeout(const Duration(seconds: 45));
       final generatedText = response?.output ?? '';
 
-      print("Gemini Response: ${generatedText.isNotEmpty ? '✓ Received' : '✗ Empty'}");
+      print("Gemini Response Received: ${generatedText.isNotEmpty}");
+      print("Response preview: ${generatedText.length > 100 ? '${generatedText.substring(0, 100)}...' : generatedText}");
 
       if (generatedText.isEmpty) {
-        print("Empty response from Gemini");
-        setState(() => tips = _getFallbackTips());
-        return;
+        throw Exception("Empty response from Gemini AI");
       }
 
       final parsedTips = _parseGeminiResponse(generatedText);
-      setState(() => tips = parsedTips.isNotEmpty ? parsedTips : _getFallbackTips());
       
-      print("Successfully processed ${tips.length} tips");
+      if (parsedTips.isEmpty) {
+        throw Exception("Could not parse AI response. Please try again.");
+      }
+
+      setState(() {
+        tips = parsedTips;
+        isLoading = false;
+        isGeneratingTips = false;
+      });
+      
+      print("Successfully generated ${tips.length} AI tips for $persona");
       
     } catch (e) {
-      print('Error generating tips: $e');
+      print('Error generating AI tips: $e');
       setState(() {
-        errorMessage = 'AI service temporarily unavailable. Using standard water-saving tips.';
-        tips = _getFallbackTips();
+        errorMessage = 'Failed to generate AI tips: ${e.toString().replaceAll('Exception: ', '')}';
+        isLoading = false;
+        isGeneratingTips = false;
+        tips = [];
       });
-    } finally {
-      setState(() => isGeneratingTips = false);
     }
   }
 
-  /// Parse Gemini AI response
+  /// Parse Gemini AI response with better error handling
   List<Map<String, String>> _parseGeminiResponse(String response) {
     try {
-      // Clean the response
-      String cleanResponse = response.replaceAll('```json', '').replaceAll('```', '').trim();
+      // Clean the response - remove markdown code blocks and extra whitespace
+      String cleanResponse = response.trim();
+      cleanResponse = cleanResponse.replaceAll('```json', '').replaceAll('```', '').trim();
       
-      // Find JSON array
+      // Remove any text before the first [ and after the last ]
       final startIndex = cleanResponse.indexOf('[');
       final endIndex = cleanResponse.lastIndexOf(']');
       
-      if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-        final jsonString = cleanResponse.substring(startIndex, endIndex + 1);
-        print("Parsing JSON: $jsonString");
-        
-        final List<dynamic> jsonList = jsonDecode(jsonString);
-        final List<Map<String, String>> parsedTips = [];
-        
-        for (var item in jsonList) {
-          try {
-            final tip = {
-              'title': item['title']?.toString() ?? 'Water Saving Tip',
-              'description': item['description']?.toString() ?? 'Practical water conservation method',
-              'label': (item['label']?.toString() ?? 'medium').toLowerCase(),
-              'saving': item['saving']?.toString() ?? '-25L/day',
-            };
-            parsedTips.add(tip);
-          } catch (e) {
-            print('Error parsing individual tip: $e');
-          }
-        }
-        
-        return parsedTips;
+      if (startIndex == -1 || endIndex == -1 || endIndex <= startIndex) {
+        print('No JSON array found in response');
+        return [];
       }
+      
+      final jsonString = cleanResponse.substring(startIndex, endIndex + 1);
+      print("Parsing JSON: $jsonString");
+      
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      final List<Map<String, String>> parsedTips = [];
+      
+      for (var item in jsonList) {
+        try {
+          if (item is Map<String, dynamic>) {
+            final tip = {
+              'title': item['title']?.toString().trim() ?? 'Water Saving Tip',
+              'description': item['description']?.toString().trim() ?? 'Practical water conservation method',
+              'label': _validateLabel(item['label']?.toString().toLowerCase() ?? 'medium'),
+              'saving': item['saving']?.toString().trim() ?? '25L per day',
+            };
+            
+            // Validate required fields
+            if (tip['title']!.isNotEmpty && tip['description']!.isNotEmpty) {
+              parsedTips.add(tip);
+            }
+          }
+        } catch (e) {
+          print('Error parsing individual tip: $e');
+        }
+      }
+      
+      if (parsedTips.length < 3) {
+        print('Warning: Only got ${parsedTips.length} valid tips, expected 3');
+      }
+      
+      return parsedTips;
     } catch (e) {
       print('JSON parsing failed: $e');
+      return [];
     }
+  }
 
-    return _getFallbackTips();
+  /// Validate and normalize difficulty labels
+  String _validateLabel(String label) {
+    if (label.contains('easy')) return 'easy';
+    if (label.contains('medium')) return 'medium';
+    if (label.contains('hard')) return 'hard';
+    return 'medium'; // default
   }
 
   /// Apply a selected tip and store in Firestore
@@ -242,7 +276,12 @@ Make the tips practical and relevant to daily life.
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to apply tips')),
+        SnackBar(
+          content: Text('Please log in to apply tips'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
       return;
     }
@@ -297,7 +336,7 @@ Make the tips practical and relevant to daily life.
             ],
           ),
           content: Text(
-            '"$tipTitle" has been applied for today! ✅',
+            '"$tipTitle" has been applied for today! ✅\n\nThis tip was personalized for your $userPersona profile.',
             style: GoogleFonts.poppins(fontSize: 14),
           ),
           actions: [
@@ -345,10 +384,8 @@ Make the tips practical and relevant to daily life.
         return;
       }
 
-      // Get API key from .env safely
       final apiKey = dotenv.env['OPENWEATHER_API_KEY'];
       if (apiKey == null || apiKey.isEmpty) {
-        print('Error: OPENWEATHER_API_KEY is missing.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Weather service unavailable.'),
@@ -360,23 +397,20 @@ Make the tips practical and relevant to daily life.
         return;
       }
 
-      // Fetch 5-day weather forecast data
       final response = await http.get(Uri.parse(
           'https://api.openweathermap.org/data/2.5/forecast?q=$_location&appid=$apiKey&units=metric'));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         double totalRain = 0.0;
+        
         for (var entry in data['list']) {
           if (entry['rain'] != null && entry['rain']['3h'] != null) {
             totalRain += (entry['rain']['3h'] as num).toDouble();
           }
         }
 
-        // Calculate estimated harvest (m² × rainfall × 0.8)
         final estimatedHarvest = roofArea * totalRain * 0.8;
-
         setState(() => _simulatedHarvest = estimatedHarvest);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -398,7 +432,6 @@ Make the tips practical and relevant to daily life.
         );
       }
     } catch (e) {
-      print('Simulation error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Simulation service unavailable.'),
@@ -424,7 +457,6 @@ Make the tips practical and relevant to daily life.
       case 3:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
         break;
-      // Add other cases as needed for your navigation structure
     }
   }
 
@@ -452,7 +484,7 @@ Make the tips practical and relevant to daily life.
             // Header
             _buildHeader(),
             
-            // Content
+            // Content - Everything scrollable
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
@@ -462,6 +494,20 @@ Make the tips practical and relevant to daily life.
                     const SizedBox(height: 20),
                     _buildAITipsSection(),
                     const SizedBox(height: 20),
+                    
+                    // Weather Widget
+                    WeatherWidget(
+                      onRainfallData: (rainfall) {
+                        print("Current rainfall: ${rainfall}mm");
+                        // You can use this data to update your simulator
+                        if (rainfall > 0) {
+                          print("Rain detected! Consider updating simulator.");
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Simulator Card
                     _buildSimulatorCard(),
                     const SizedBox(height: 20),
                     _buildFootprintCard(),
@@ -473,7 +519,6 @@ Make the tips practical and relevant to daily life.
           ],
         ),
       ),
-      // REPLACED: Using your custom DashboardNavBar instead of the built-in BottomNavigationBar
       bottomNavigationBar: DashboardNavBar(
         currentIndex: _selectedIndex,
         onTap: _onNavItemTapped,
@@ -522,7 +567,7 @@ Make the tips practical and relevant to daily life.
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "Personalized conservation strategies",
+                    "Personalized for your profile",
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       color: Colors.white.withOpacity(0.8),
@@ -531,7 +576,7 @@ Make the tips practical and relevant to daily life.
                 ],
               ),
             ),
-            if (!isLoading && _geminiInitialized)
+            if (!isLoading && _geminiInitialized && userPersona != null)
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
@@ -540,7 +585,7 @@ Make the tips practical and relevant to daily life.
                 child: IconButton(
                   onPressed: () => _generateAITips(userPersona!),
                   icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  tooltip: 'Refresh Tips',
+                  tooltip: 'Generate New Tips',
                 ),
               ),
           ],
@@ -613,7 +658,7 @@ Make the tips practical and relevant to daily life.
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          userPersona ?? 'Casual User',
+                          _getUserName(),
                           style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -624,7 +669,7 @@ Make the tips practical and relevant to daily life.
                         Text(
                           _geminiInitialized 
                               ? "AI-powered personalized tips"
-                              : "Standard water-saving tips",
+                              : "AI service initializing...",
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: Colors.grey.shade600,
@@ -642,7 +687,7 @@ Make the tips practical and relevant to daily life.
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      _geminiInitialized ? Icons.auto_awesome : Icons.lightbulb_outline,
+                      _geminiInitialized ? Icons.auto_awesome : Icons.sync,
                       color: _geminiInitialized ? const Color(0xFF764BA2) : Colors.grey,
                       size: 20,
                     ),
@@ -683,7 +728,7 @@ Make the tips practical and relevant to daily life.
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
-                  Icons.lightbulb_outline,
+                  Icons.auto_awesome,
                   color: Color(0xFFFF9A3D),
                   size: 22,
                 ),
@@ -691,7 +736,7 @@ Make the tips practical and relevant to daily life.
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  _geminiInitialized ? "AI Personalized Tips" : "Water Saving Tips",
+                  "AI Personalized Tips",
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -709,14 +754,15 @@ Make the tips practical and relevant to daily life.
           ),
           const SizedBox(height: 8),
           Text(
-            _geminiInitialized 
-                ? "Tips for ${userPersona ?? 'your profile'}"
-                : "Practical water conservation methods",
+            userPersona != null 
+                ? "Tips specifically for $userPersona"
+                : "Generating personalized tips...",
             style: GoogleFonts.poppins(
               fontSize: 14,
               color: Colors.grey.shade600,
             ),
           ),
+          
           if (errorMessage != null) ...[
             const SizedBox(height: 16),
             Container(
@@ -728,27 +774,63 @@ Make the tips practical and relevant to daily life.
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                  Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      errorMessage!,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.orange.shade700,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "AI Service Notice",
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          errorMessage!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _generateAITips(userPersona!),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2D7DD2),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: Text(
+                  "Try Again",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
           ],
+          
           const SizedBox(height: 20),
+          
           if (isLoading)
             _buildLoadingTips()
-          else if (tips.isEmpty)
+          else if (tips.isEmpty && errorMessage == null)
             _buildEmptyTipsState()
-          else
+          else if (tips.isNotEmpty)
             ...tips.map((tip) => _buildTipCard(tip)),
         ],
       ),
@@ -820,10 +902,10 @@ Make the tips practical and relevant to daily life.
       ),
       child: Column(
         children: [
-          Icon(Icons.water_drop_outlined, size: 64, color: Colors.grey.shade400),
+          Icon(Icons.auto_awesome, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
-            "Tips Loading",
+            "Generate AI Tips",
             style: GoogleFonts.poppins(
               fontSize: 16,
               fontWeight: FontWeight.w500,
@@ -832,7 +914,7 @@ Make the tips practical and relevant to daily life.
           ),
           const SizedBox(height: 8),
           Text(
-            "We're preparing your water-saving recommendations",
+            "Get personalized water-saving tips generated by AI for your profile",
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(
               fontSize: 14,
@@ -841,14 +923,14 @@ Make the tips practical and relevant to daily life.
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () => _generateAITips(userPersona!),
+            onPressed: userPersona != null ? () => _generateAITips(userPersona!) : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2D7DD2),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: Text(
-              'Try Again',
+              'Generate Tips',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w500,
                 color: Colors.white,
@@ -886,14 +968,12 @@ Make the tips practical and relevant to daily life.
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _geminiInitialized 
-                      ? const Color(0xFF764BA2).withOpacity(0.1)
-                      : const Color(0xFF2D7DD2).withOpacity(0.1),
+                  color: const Color(0xFF764BA2).withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _geminiInitialized ? Icons.auto_awesome : Icons.eco,
-                  color: _geminiInitialized ? const Color(0xFF764BA2) : const Color(0xFF2D7DD2),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: Color(0xFF764BA2),
                   size: 20,
                 ),
               ),
@@ -974,7 +1054,7 @@ Make the tips practical and relevant to daily life.
                 elevation: 0,
               ),
               child: Text(
-                "Apply Today",
+                "Apply This Tip",
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -1036,7 +1116,7 @@ Make the tips practical and relevant to daily life.
             controller: _roofController,
             decoration: InputDecoration(
               labelText: "Roof Area (m²)",
-              labelStyle: GoogleFonts.poppins(color: const Color.fromARGB(255, 152, 87, 87)),
+              labelStyle: GoogleFonts.poppins(color: Colors.grey.shade600),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1270,5 +1350,15 @@ Make the tips practical and relevant to daily life.
         ],
       ),
     );
+  }
+  
+  String _getUserName() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Try to get display name first, then email username, then fallback
+      return user.displayName ?? 
+             (user.email?.split('@').first ?? 'User');
+    }
+    return 'User';
   }
 }

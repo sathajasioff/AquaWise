@@ -1,7 +1,8 @@
 class User {
   final String username;
   final String email;
-  final String? persona; // optional now
+  final String? persona;
+   // optional now
 
   User({
     required this.username,
