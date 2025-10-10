@@ -206,6 +206,7 @@ class MyApp extends StatelessWidget {
         // '/report' : (context) => const ReportGeneratorPage(),
         '/forgot_password': (context) => const ForgotPasswordPage(),
         '/gamification': (context) => const GamificationScreen(),
+        
       },
     );
   }

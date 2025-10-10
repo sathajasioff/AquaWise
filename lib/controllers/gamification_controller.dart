@@ -5,7 +5,6 @@ import '../models/user_challenge.dart';
 import '../../models/challenge.dart' hide UserChallenge;
 import '../../models/user_gamification.dart';
 import '../models/badge.dart';
-import '../../models/badge.dart'; // Add this import
 
 class GamificationController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,7 +20,7 @@ class GamificationController {
       points: 50,
       type: 'eco',
       activity: 'Bathing',
-      targetTime: 300, // 5 minutes
+      targetTime: 300,
       targetLiters: 50.0,
       difficulty: 'easy',
     ),
@@ -56,7 +55,7 @@ class GamificationController {
       points: 150,
       type: 'budget',
       activity: 'All',
-      targetTime: 604800, // 1 week
+      targetTime: 604800,
       targetLiters: 1250.0,
       difficulty: 'hard',
     ),
@@ -99,9 +98,9 @@ class GamificationController {
     ),
   ];
 
-  // 🏆 Predefined badges
+  // 🏆 Predefined badges - UNIVERSAL FOR ALL USER TYPES
   final List<Badge> _allBadges = [
-    // 🌱 Beginner Badges
+    // 🌱 Beginner Badges - Available to ALL users
     Badge(
       id: 'beginner_saver',
       name: 'Water Saver Beginner',
@@ -121,7 +120,7 @@ class GamificationController {
       rarity: 'common',
     ),
 
-    // 💰 Budget Badges
+    // 💰 Budget Badges - Available to ALL users
     Badge(
       id: 'budget_master',
       name: 'Budget Master',
@@ -141,7 +140,7 @@ class GamificationController {
       rarity: 'rare',
     ),
 
-    // 🌿 Eco Warrior Badges
+    // 🌿 Eco Warrior Badges - Available to ALL users
     Badge(
       id: 'eco_warrior',
       name: 'Eco Warrior',
@@ -161,7 +160,7 @@ class GamificationController {
       rarity: 'epic',
     ),
 
-    // 👨‍👩‍👧 Family Badges
+    // 👨‍👩‍👧 Family Badges - Available to ALL users
     Badge(
       id: 'family_hero',
       name: 'Family Water Hero',
@@ -172,7 +171,7 @@ class GamificationController {
       rarity: 'rare',
     ),
 
-    // 🏆 Advanced Badges
+    // 🏆 Advanced Badges - Available to ALL users
     Badge(
       id: 'water_wizard',
       name: 'Water Wizard',
@@ -196,74 +195,83 @@ class GamificationController {
   // ✅ Return challenges filtered by userType
   List<Challenge> getChallengesForPersona(String userType) {
     final cleanType = userType.trim().toLowerCase();
-    print('🎯 Filtering challenges for userType: "$cleanType" (original: "$userType")');
+    print('🎯 Filtering challenges for userType: "$cleanType"');
 
-    // More flexible matching
     if (cleanType.contains('eco') || cleanType.contains('environment') || cleanType.contains('green')) {
       final ecoChallenges = _allChallenges.where((c) => c.type == 'eco').toList();
       print('🌱 Found ${ecoChallenges.length} eco challenges');
-      ecoChallenges.forEach((c) => print('   - ${c.title}'));
       return ecoChallenges;
     } 
     else if (cleanType.contains('budget') || cleanType.contains('money') || cleanType.contains('save') || cleanType.contains('saver')) {
       final budgetChallenges = _allChallenges.where((c) => c.type == 'budget').toList();
       print('💰 Found ${budgetChallenges.length} budget challenges');
-      budgetChallenges.forEach((c) => print('   - ${c.title}'));
       return budgetChallenges;
     } 
     else if (cleanType.contains('family') || cleanType.contains('parent') || cleanType.contains('household')) {
       final familyChallenges = _allChallenges.where((c) => c.type == 'family').toList();
       print('👨‍👩‍👧 Found ${familyChallenges.length} family challenges');
-      familyChallenges.forEach((c) => print('   - ${c.title}'));
       return familyChallenges;
     } 
-    else if (cleanType.contains('casual') || cleanType.contains('normal') || cleanType.contains('default')) {
+    else {
       final casualChallenges = _allChallenges.where((c) => c.type == 'casual').toList();
       print('🙂 Found ${casualChallenges.length} casual challenges');
-      casualChallenges.forEach((c) => print('   - ${c.title}'));
       return casualChallenges;
     }
-
-    // Default fallback with warning
-    print('⚠️ Unknown userType "$cleanType", defaulting to casual');
-    return _allChallenges.where((c) => c.type == 'casual').toList();
   }
 
-  // ✅ Get userType from Firestore - CORRECT FIELD NAME
+  // ✅ Get userType from Firestore
   Future<String> getUserPersona() async {
     final user = _auth.currentUser;
-    if (user == null) {
-      print('❌ No user logged in, defaulting to casual');
-      return 'casual';
-    }
+    if (user == null) return 'casual';
 
     try {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       if (doc.exists) {
         final data = doc.data()!;
-        print('📄 User document data: $data');
-        
-        // Check all possible field names
         final userType = data['userType'] ?? data['UserType'] ?? data['usertype'] ?? data['persona'] ?? 'casual';
-        print('👤 Extracted userType: "$userType"');
-        
-        // Print the actual type for debugging
-        print('🔍 userType runtime type: ${userType.runtimeType}');
-        print('🔍 userType value: "$userType"');
-        print('🔍 userType length: ${userType.length}');
-        
         return userType.toString().toLowerCase().trim();
-      } else {
-        print('📄 User document does not exist, defaulting to casual');
-        return 'casual';
       }
+      return 'casual';
     } catch (e) {
       print('❌ Error fetching userType: $e');
       return 'casual';
     }
   }
 
-  // ✅ Start a new challenge
+  // ✅ NEW: Get essential user data in single read
+  Future<Map<String, dynamic>> getUserEssentialData() async {
+    final user = _auth.currentUser;
+    if (user == null) return {'userType': 'casual', 'username': 'User'};
+
+    try {
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      
+      if (!userDoc.exists) {
+        return {'userType': 'casual', 'username': 'User'};
+      }
+
+      final userData = userDoc.data()!;
+      final dynamic userTypeValue = userData['userType'] ?? 
+                                  userData['UserType'] ?? 
+                                  userData['usertype'] ?? 
+                                  userData['persona'] ?? 
+                                  'casual';
+      
+      final String userType = userTypeValue.toString().toLowerCase().trim();
+      
+      return {
+        'userType': userType,
+        'username': userData['username'] ?? 'User',
+        'email': userData['email'] ?? '',
+      };
+      
+    } catch (e) {
+      print('❌ Error loading essential data: $e');
+      return {'userType': 'casual', 'username': 'User'};
+    }
+  }
+
+  // ✅ Start a new challenge - FOR ALL USER TYPES
   Future<void> startChallenge(Challenge challenge) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -284,14 +292,14 @@ class GamificationController {
           .doc(docId)
           .set(userChallenge.toMap());
 
-      print('🎯 Started challenge: ${challenge.title} with ID: $docId');
+      print('🎯 Started challenge: ${challenge.title} for user ${user.uid}');
     } catch (e) {
       print('❌ Error starting challenge: $e');
       rethrow;
     }
   }
 
-  // ✅ Complete a challenge
+  // ✅ Complete a challenge - FOR ALL USER TYPES
   Future<void> completeChallenge(String challengeId, int actualTime, double actualLiters) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -331,7 +339,7 @@ class GamificationController {
     }
   }
 
-  // ✅ Update total points with badge checking
+  // ✅ Update total points with badge checking - ENHANCED FOR ALL USERS
   Future<void> _updateUserPoints(int points) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -356,7 +364,7 @@ class GamificationController {
             'lastActivity': DateTime.now().toIso8601String(),
           });
           
-          print('💰 Updated points: $currentPoints + $points = ${currentPoints + points}');
+          print('💰 Updated points: $currentPoints + $points = $newTotalPoints');
         } else {
           newTotalPoints = points;
           completedChallenges = 1;
@@ -372,6 +380,7 @@ class GamificationController {
         }
 
         // Check for new badges after points update
+        print('🔍 Checking for badges at $newTotalPoints points...');
         await _checkAndAwardBadges(newTotalPoints);
       });
     } catch (e) {
@@ -379,25 +388,49 @@ class GamificationController {
     }
   }
 
-  // 🏆 Check and award badges when points are updated
+  // 🏆 Check and award badges when points are updated - FIXED FOR ALL USER TYPES
   Future<void> _checkAndAwardBadges(int newTotalPoints) async {
     final user = _auth.currentUser;
     if (user == null) return;
 
     try {
-      final userBadges = await _getUserBadges().first;
-      final earnedBadgeIds = userBadges.map((b) => b.badgeId).toList();
+      // Get current user badges
+      final userBadgesSnapshot = await _firestore
+          .collection('userBadges')
+          .where('userId', isEqualTo: user.uid)
+          .get();
 
-      // Find badges that user qualifies for but hasn't earned yet
+      final earnedBadgeIds = userBadgesSnapshot.docs.map((doc) => doc.data()['badgeId'] as String).toSet();
+
+      // Find ALL badges that user qualifies for but hasn't earned yet
       final eligibleBadges = _allBadges.where((badge) {
-        return newTotalPoints >= badge.pointsRequired && 
-               !earnedBadgeIds.contains(badge.id);
+        final qualifies = newTotalPoints >= badge.pointsRequired;
+        final notEarned = !earnedBadgeIds.contains(badge.id);
+        
+        if (qualifies && notEarned) {
+          print('🎯 Eligible badge: ${badge.name} (${badge.pointsRequired} points)');
+        }
+        
+        return qualifies && notEarned;
       }).toList();
 
-      // Award new badges
+      print('🎯 Total eligible badges: ${eligibleBadges.length} at $newTotalPoints points');
+      print('📊 Earned badges: ${earnedBadgeIds.length}, Total badges: ${_allBadges.length}');
+
+      // Award ALL eligible badges at once
       for (final badge in eligibleBadges) {
         await _awardBadge(badge, newTotalPoints);
+        print('✅ Awarded badge: ${badge.name} (${badge.pointsRequired} points)');
       }
+
+      // If we awarded any badges, print summary
+      if (eligibleBadges.isNotEmpty) {
+        print('🎉 Successfully awarded ${eligibleBadges.length} badges!');
+        print('📈 New total points: $newTotalPoints');
+      } else {
+        print('ℹ️ No new badges to award at $newTotalPoints points');
+      }
+      
     } catch (e) {
       print('❌ Error checking badges: $e');
     }
@@ -421,7 +454,7 @@ class GamificationController {
           .doc('${user.uid}_${badge.id}')
           .set(userBadge.toMap());
 
-      print('🎖️ Awarded badge: ${badge.name}');
+      print('🎖️ Successfully awarded badge: ${badge.name}');
     } catch (e) {
       print('❌ Error awarding badge: $e');
     }
@@ -481,48 +514,70 @@ class GamificationController {
           .where((badge) => badge.pointsRequired > currentPoints)
           .toList()
         ..sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired))
-        ..take(3); // Show next 3 achievable badges
+        ..take(3);
     });
   }
 
-  // 🏆 Get user progress towards next badge
+  // 🏆 Get user progress towards next badge - FIXED FOR ALL USER TYPES
   Stream<Map<String, dynamic>> getBadgeProgress() {
-  return getUserPoints().asyncMap((currentPoints) async {
-    final userBadges = await _getUserBadges().first;
-    final earnedBadgeIds = userBadges.map((b) => b.badgeId).toSet();
+    return getUserPoints().asyncMap((currentPoints) async {
+      final userBadges = await _getUserBadges().first;
+      final earnedBadgeIds = userBadges.map((b) => b.badgeId).toSet();
 
-    // Find next achievable badge
-    final availableBadges = _allBadges
-        .where((badge) => !earnedBadgeIds.contains(badge.id))
-        .toList();
+      // Find badges that user hasn't earned yet
+      final unearnedBadges = _allBadges
+          .where((badge) => !earnedBadgeIds.contains(badge.id))
+          .toList();
 
-    if (availableBadges.isNotEmpty) {
-      // Sort by points required and get the next badge
-      availableBadges.sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired));
-      final nextBadge = availableBadges.first;
+      if (unearnedBadges.isNotEmpty) {
+        // Sort by points required to get the progression order
+        unearnedBadges.sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired));
+        
+        // Always take the first unearned badge (lowest points requirement)
+        final nextBadge = unearnedBadges.first;
+        
+        // Calculate progress and points needed
+        final progress = (currentPoints / nextBadge.pointsRequired).clamp(0.0, 1.0);
+        final pointsNeeded = (nextBadge.pointsRequired - currentPoints).clamp(0, nextBadge.pointsRequired);
+        final isAchievable = currentPoints >= nextBadge.pointsRequired;
+        
+        // Debug information
+        print('🎯 Badge Progress for all users:');
+        print('   - Current Points: $currentPoints');
+        print('   - Next Badge: ${nextBadge.name} (${nextBadge.pointsRequired} points)');
+        print('   - Points Needed: $pointsNeeded');
+        print('   - Is Achievable: $isAchievable');
+        print('   - Unearned Badges: ${unearnedBadges.length}');
+        print('   - Earned Badges: ${earnedBadgeIds.length}');
+        
+        return {
+          'nextBadge': nextBadge,
+          'currentPoints': currentPoints,
+          'pointsRequired': nextBadge.pointsRequired,
+          'progress': progress,
+          'pointsNeeded': pointsNeeded,
+          'isAchievable': isAchievable,
+          'status': isAchievable ? 'Ready to Earn!' : 'In Progress',
+          'unearnedBadgesCount': unearnedBadges.length,
+        };
+      }
       
-      final progress = (currentPoints / nextBadge.pointsRequired).clamp(0.0, 1.0);
-      return {
-        'nextBadge': nextBadge,
-        'currentPoints': currentPoints,
-        'pointsRequired': nextBadge.pointsRequired,
-        'progress': progress,
-        'pointsNeeded': nextBadge.pointsRequired - currentPoints,
-      };
-    } else {
       // All badges earned
+      print('🏆 All badges earned! Total points: $currentPoints');
       return {
         'nextBadge': null,
         'currentPoints': currentPoints,
         'pointsRequired': 0,
         'progress': 1.0,
         'pointsNeeded': 0,
+        'isAchievable': false,
+        'status': 'All Badges Earned! 🎉',
+        'unearnedBadgesCount': 0,
       };
-    }
-  });
-}
+    });
+  }
 
-  // ✅ Streams (Existing functionality - unchanged)
+  // ✅ Streams for ALL USER TYPES
   Stream<List<UserChallenge>> getActiveChallenges() {
     final user = _auth.currentUser;
     if (user == null) return const Stream.empty();
@@ -534,7 +589,6 @@ class GamificationController {
         .snapshots()
         .map((snapshot) {
           final challenges = snapshot.docs.map((doc) => UserChallenge.fromMap(doc.data())).toList();
-          print('🔄 Active challenges stream: ${challenges.length} challenges');
           return challenges;
         });
   }
@@ -550,7 +604,6 @@ class GamificationController {
         .snapshots()
         .map((snapshot) {
           final challenges = snapshot.docs.map((doc) => UserChallenge.fromMap(doc.data())).toList();
-          print('🔄 Completed challenges stream: ${challenges.length} challenges');
           return challenges;
         });
   }
@@ -568,46 +621,31 @@ class GamificationController {
           final data = snap.data();
           if (data == null) return 0;
           final points = (data['totalPoints'] ?? 0) as int;
-          print('🔄 Points stream: $points points');
           return points;
         });
   }
 
-  // 🎯 CASUAL TASKS METHODS - CORRECTED (NO DUPLICATES)
-
-  // 🎯 GET CASUAL TASKS FROM LEADERBOARD - SINGLE VERSION
+  // 🎯 CASUAL TASKS METHODS - Only for casual users
   Stream<List<Map<String, dynamic>>> getCasualTasksFromLeaderboard() {
     final user = _auth.currentUser;
-    if (user == null) {
-      print('❌ No user logged in');
-      return const Stream.empty();
-    }
+    if (user == null) return const Stream.empty();
 
     return _firestore
         .collection('leaderboard')
         .doc(user.uid)
         .snapshots()
         .map((snapshot) {
-          if (!snapshot.exists) {
-            print('📊 No leaderboard document found for user ${user.uid}');
-            return <Map<String, dynamic>>[];
-          }
+          if (!snapshot.exists) return <Map<String, dynamic>>[];
 
           final data = snapshot.data()!;
-          print('📄 Leaderboard data: $data');
-          
           final userTasks = data['userTasks'] as Map<String, dynamic>?;
           
           if (userTasks == null || userTasks.isEmpty) {
-            print('📭 No userTasks found in leaderboard');
             return <Map<String, dynamic>>[];
           }
 
-          // Convert to list and include all tasks
-          final tasks = userTasks.entries.map((entry) {
+          return userTasks.entries.map((entry) {
             final taskData = entry.value as Map<String, dynamic>;
-            print('🎯 Processing task: ${entry.key} -> $taskData');
-            
             return {
               'taskId': entry.key,
               'taskName': taskData['taskName'] ?? 'Unknown Task',
@@ -619,40 +657,20 @@ class GamificationController {
               'isFromLeaderboard': true,
             };
           }).toList();
-
-          print('✅ Found ${tasks.length} casual tasks from leaderboard');
-          return tasks;
         }).handleError((error) {
           print('❌ Error in casual tasks stream: $error');
           return <Map<String, dynamic>>[];
         });
   }
 
-  // 🎯 GET ACTIVE CASUAL TASKS (for progress tracking)
-  Stream<List<Map<String, dynamic>>> getActiveCasualTasks() {
-    return getCasualTasksFromLeaderboard().map((tasks) {
-      return tasks.where((task) => task['status'] == 'started').toList();
-    });
-  }
-
-  // 🎯 GET COMPLETED CASUAL TASKS (for achievements)
-  Stream<List<Map<String, dynamic>>> getCompletedCasualTasks() {
-    return getCasualTasksFromLeaderboard().map((tasks) {
-      return tasks.where((task) => task['status'] == 'completed').toList();
-    });
-  }
-
-  // 🎯 COMPLETE CASUAL TASK - CORRECTED VERSION
+  // 🎯 COMPLETE CASUAL TASK - Only for casual users
   Future<void> completeCasualTaskFromGamification(String taskId) async {
     final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('No user logged in');
-    }
+    if (user == null) throw Exception('No user logged in');
 
     try {
       final leaderboardRef = _firestore.collection('leaderboard').doc(user.uid);
       
-      // Use transaction for atomic updates
       await _firestore.runTransaction((transaction) async {
         final leaderboardDoc = await transaction.get(leaderboardRef);
         
@@ -674,13 +692,11 @@ class GamificationController {
           throw Exception('Task is already completed');
         }
 
-        // Calculate points
         final int points = _calculateTaskPoints(taskData);
         final currentTotalPoints = (data['totalPoints'] ?? 0) as int;
         
-        print('🎯 Completing task $taskId with $points points');
+        print('🎯 Completing casual task $taskId with $points points');
 
-        // Update leaderboard within transaction
         transaction.update(leaderboardRef, {
           'userTasks.$taskId.status': 'completed',
           'userTasks.$taskId.completedAt': DateTime.now().toIso8601String(),
@@ -690,7 +706,7 @@ class GamificationController {
         });
       });
 
-      // Update gamification system after successful transaction
+      // Update gamification system
       final leaderboardDoc = await leaderboardRef.get();
       final data = leaderboardDoc.data()!;
       final userTasks = data['userTasks'] as Map<String, dynamic>? ?? {};
@@ -712,16 +728,14 @@ class GamificationController {
     final String taskName = taskData['taskName']?.toString().toLowerCase() ?? '';
     final String category = taskData['category']?.toString().toLowerCase() ?? 'general';
     
-    // Point calculation based on task characteristics
     if (category.contains('daily')) return 25;
     if (category.contains('weekly')) return 50;
     if (category.contains('achievement')) return 100;
     if (taskName.contains('challenge')) return 75;
     if (taskName.contains('water') && taskName.contains('save')) return 60;
     
-    return 30; // Default points
+    return 30;
   }
-  
 
   Stream<GamificationUser?> getGamificationUser() {
     final user = _auth.currentUser;

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:watermeter/screens/AI/AItips.dart';
 import 'package:watermeter/screens/Gamification/gamification.dart';
+import 'package:watermeter/screens/Report/report.dart';
 import 'package:watermeter/widgets/active_challenge.dart';
 import 'package:watermeter/widgets/dashboard_navbar.dart';
 import '../../controllers/dashboard_controller.dart';
@@ -130,7 +131,7 @@ class _DashboardViewState extends State<DashboardView> {
   void _navigateToReportGenerator() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ReportGeneratorPage()),
+      MaterialPageRoute(builder: (context) => const ReportScreen()),
     );
   }
 

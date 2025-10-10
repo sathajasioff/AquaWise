@@ -6,7 +6,6 @@ import '../../models/challenge.dart';
 import '../../models/user_challenge.dart';
 import '../../models/user.dart';
 import '../../models/badge.dart';
-import '../../models/badge.dart';
 
 class GamificationScreen extends StatefulWidget {
   const GamificationScreen({Key? key}) : super(key: key);
@@ -15,7 +14,8 @@ class GamificationScreen extends StatefulWidget {
   State<GamificationScreen> createState() => _GamificationScreenState();
 }
 
-class _GamificationScreenState extends State<GamificationScreen> {
+class _GamificationScreenState extends State<GamificationScreen> 
+    with AutomaticKeepAliveClientMixin<GamificationScreen> {
   final GamificationController _controller = GamificationController();
   final DashboardController _dashboardController = DashboardController();
   String? _userType;
@@ -25,6 +25,9 @@ class _GamificationScreenState extends State<GamificationScreen> {
   bool _isCasualUser = false;
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
     _loadUserData();
@@ -32,17 +35,18 @@ class _GamificationScreenState extends State<GamificationScreen> {
 
   Future<void> _loadUserData() async {
     try {
+      // Use the new efficient method
+      final userData = await _controller.getUserEssentialData();
       final user = await _dashboardController.fetchUser();
-      final userType = await _controller.getUserPersona();
-      final challenges = _controller.getChallengesForPersona(userType);
+      final challenges = _controller.getChallengesForPersona(userData['userType']);
       
       print('✅ Loaded user: ${user?.username}');
-      print('✅ Loaded userType: $userType');
+      print('✅ Loaded userType: ${userData['userType']}');
       print('✅ Available challenges: ${challenges.length}');
 
       setState(() {
         _currentUser = user;
-        _userType = userType.trim().toLowerCase();
+        _userType = userData['userType'];
         _availableChallenges = challenges;
         _isCasualUser = _userType == 'casual';
         _loading = false;
@@ -57,19 +61,10 @@ class _GamificationScreenState extends State<GamificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+    
     if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading Gamification...'),
-            ],
-          ),
-        ),
-      );
+      return _buildLoadingScreen();
     }
 
     // Determine tabs based on user type
@@ -122,6 +117,30 @@ class _GamificationScreenState extends State<GamificationScreen> {
     );
   }
 
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFD),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9A00)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading Your Game...',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // 🎯 CHALLENGES TAB
   Widget _buildChallengesTab() {
     return SingleChildScrollView(
@@ -158,7 +177,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
 
     return Column(
       children: [
-        // Debug Info Card
+        // User Info Card
         Card(
           margin: const EdgeInsets.all(16),
           color: Colors.blue.shade50,
@@ -168,7 +187,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue, size: 20),
+                    Icon(Icons.person, color: Colors.blue, size: 20),
                     SizedBox(width: 8),
                     Text(
                       'Casual User Dashboard',
@@ -179,7 +198,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
                 const SizedBox(height: 8),
                 Text('User Type: $_userType'),
                 Text('Username: ${_currentUser?.username ?? 'N/A'}'),
-                Text('Total Points: ${_getCurrentPoints()}'),
+                _buildCurrentPointsDisplay(),
               ],
             ),
           ),
@@ -189,25 +208,15 @@ class _GamificationScreenState extends State<GamificationScreen> {
           child: StreamBuilder<List<Map<String, dynamic>>>(
             stream: _controller.getCasualTasksFromLeaderboard(),
             builder: (context, snapshot) {
-              print('🔄 Casual tasks stream state: ${snapshot.connectionState}');
-              print('🔄 Casual tasks has error: ${snapshot.hasError}');
-              print('🔄 Casual tasks has data: ${snapshot.hasData}');
-              
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return _buildCasualTasksLoading();
               }
 
               if (snapshot.hasError) {
-                print('❌ Stream error: ${snapshot.error}');
                 return _buildCasualTasksError(snapshot.error.toString());
               }
 
-              if (!snapshot.hasData) {
-                return _buildNoCasualTasks();
-              }
-
-              final tasks = snapshot.data!;
-              print('📊 Loaded ${tasks.length} casual tasks');
+              final tasks = snapshot.data ?? [];
               
               if (tasks.isEmpty) {
                 return _buildNoCasualTasks();
@@ -221,30 +230,25 @@ class _GamificationScreenState extends State<GamificationScreen> {
     );
   }
 
+  Widget _buildCurrentPointsDisplay() {
+    return StreamBuilder<int>(
+      stream: _controller.getUserPoints(),
+      builder: (context, snapshot) {
+        final points = snapshot.data ?? 0;
+        return Text(
+          'Current Points: $points',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        );
+      },
+    );
+  }
+
   Widget _buildCasualTasksList(List<Map<String, dynamic>> tasks) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         // Progress Overview
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Progress Overview', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Icon(Icons.analytics, color: Colors.blue),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildProgressStats(tasks),
-              ],
-            ),
-          ),
-        ),
-        
+        _buildProgressStats(tasks),
         const SizedBox(height: 16),
         
         // Tasks List Header
@@ -272,53 +276,60 @@ class _GamificationScreenState extends State<GamificationScreen> {
     final totalTasks = tasks.length;
     final progress = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
     
-    // Fixed points calculation
     final totalPoints = tasks.fold<int>(0, (int sum, task) {
-  final points = task['pointsEarned'];
-  if (points is int) {
-    return sum + points;
-  } else if (points is double) {
-    return sum + points.toInt();
-  } else if (points is String) {
-    final parsedPoints = int.tryParse(points);
-    return sum + (parsedPoints ?? 0);
-  }
-  return sum;
-});
+      final points = task['pointsEarned'];
+      if (points is int) return sum + points;
+      if (points is double) return sum + points.toInt();
+      if (points is String) return sum + (int.tryParse(points) ?? 0);
+      return sum;
+    });
 
-    return Column(
-      children: [
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey.shade200,
-          color: Colors.blue,
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('$completedTasks/$totalTasks completed'),
-                Text(
-                  '${(progress * 100).toStringAsFixed(1)}% Complete',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+                Text('Progress Overview', style: TextStyle(fontWeight: FontWeight.bold)),
+                Icon(Icons.analytics, color: Colors.blue),
               ],
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            const SizedBox(height: 12),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey.shade200,
+              color: Colors.blue,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('$totalPoints Points', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('Total Earned', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$completedTasks/$totalTasks completed'),
+                    Text(
+                      '${(progress * 100).toStringAsFixed(1)}% Complete',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('$totalPoints Points', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Total Earned', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
               ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -420,6 +431,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  minimumSize: const Size(80, 30),
                 ),
               ),
           ],
@@ -436,11 +448,6 @@ class _GamificationScreenState extends State<GamificationScreen> {
           CircularProgressIndicator(),
           SizedBox(height: 16),
           Text('Loading your casual tasks...'),
-          SizedBox(height: 8),
-          Text('Please wait while we fetch your tasks from the leaderboard',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-            textAlign: TextAlign.center,
-          ),
         ],
       ),
     );
@@ -453,7 +460,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
             const SizedBox(height: 16),
             const Text(
               'Unable to Load Tasks',
@@ -461,7 +468,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              error,
+              error.length > 100 ? '${error.substring(0, 100)}...' : error,
               style: const TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
@@ -486,7 +493,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
             Icon(Icons.task_outlined, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             const Text(
-              'No Casual Tasks Found',
+              'No Tasks Found',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -495,17 +502,14 @@ class _GamificationScreenState extends State<GamificationScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Start tasks from your dashboard to see them here.\n\n'
-              'Make sure you are starting tasks specifically designed for casual users.',
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              'Complete tasks from your dashboard to see them here.',
+              style: TextStyle(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loadUserData,
-              child: const Text('Refresh Tasks'),
+              child: const Text('Refresh'),
             ),
           ],
         ),
@@ -528,117 +532,29 @@ class _GamificationScreenState extends State<GamificationScreen> {
       await _controller.completeCasualTaskFromGamification(taskId);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Task "$taskName" completed successfully!'),
+          content: Text('"$taskName" completed! + Points earned'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
-      print('❌ Error completing casual task: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error completing task: $e'),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
     }
   }
 
-  // 🏆 BADGES TAB
+  // 🏆 BADGES TAB - UPDATED WITH ENHANCED PROGRESSION
   Widget _buildBadgesTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badge Progress
-          StreamBuilder<Map<String, dynamic>>(
-            stream: _controller.getBadgeProgress(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return _buildBadgesLoading();
-              }
-              
-              final progressData = snapshot.data ?? {};
-              final nextBadge = progressData['nextBadge'] as Badge?;
-              final currentPoints = progressData['currentPoints'] ?? 0;
-              final pointsRequired = progressData['pointsRequired'] ?? 1;
-              final progress = progressData['progress'] ?? 0.0;
-              final pointsNeeded = progressData['pointsNeeded'] ?? 0;
-              
-              return Card(
-                color: Colors.purple.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Next Badge Progress',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      if (nextBadge != null) ...[
-                        Row(
-                          children: [
-                            Text(nextBadge.icon, style: const TextStyle(fontSize: 24)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    nextBadge.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(
-                                    nextBadge.description,
-                                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: Colors.grey.shade200,
-                          color: Colors.purple,
-                          minHeight: 8,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('$currentPoints/$pointsRequired points'),
-                            Text('${pointsNeeded} points needed'),
-                          ],
-                        ),
-                      ] else ...[
-                        Center(
-                          child: Column(
-                            children: [
-                              Icon(Icons.emoji_events, size: 40, color: Colors.purple),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'All badges earned!',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'You have collected all available badges',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-          
+          // Badge Progress with Enhanced Display
+          _buildBadgeProgressSection(),
           const SizedBox(height: 24),
           
           const Text(
@@ -659,28 +575,217 @@ class _GamificationScreenState extends State<GamificationScreen> {
           ),
           const SizedBox(height: 16),
           
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _controller.getUserBadgesWithDetails(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return _buildBadgesLoading();
-              }
-
-              if (snapshot.hasError) {
-                return _buildBadgesError();
-              }
-
-              final badges = snapshot.data ?? [];
-
-              if (badges.isEmpty) {
-                return _buildNoBadges();
-              }
-
-              return _buildBadgesGrid(badges);
-            },
-          ),
+          _buildUserBadgesSection(),
         ],
       ),
+    );
+  }
+
+  Widget _buildBadgeProgressSection() {
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: _controller.getBadgeProgress(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildBadgesLoading();
+        }
+        
+        final progressData = snapshot.data ?? {};
+        final nextBadge = progressData['nextBadge'] as Badge?;
+        final currentPoints = progressData['currentPoints'] ?? 0;
+        final pointsRequired = progressData['pointsRequired'] ?? 1;
+        final progress = progressData['progress'] ?? 0.0;
+        final pointsNeeded = progressData['pointsNeeded'] ?? 0;
+        final isAchievable = progressData['isAchievable'] ?? false;
+        final status = progressData['status'] ?? 'In Progress';
+        final unearnedCount = progressData['unearnedBadgesCount'] ?? 0;
+        
+        Color cardColor;
+        Color progressColor;
+        String title;
+
+        if (nextBadge == null) {
+          cardColor = Colors.purple.shade50;
+          progressColor = Colors.purple;
+          title = 'All Badges Earned!';
+        } else if (isAchievable) {
+          cardColor = Colors.green.shade50;
+          progressColor = Colors.green;
+          title = 'Ready to Earn!';
+        } else {
+          cardColor = Colors.blue.shade50;
+          progressColor = Colors.blue;
+          title = 'Next Badge Progress';
+        }
+
+        return Card(
+          color: cardColor,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: progressColor,
+                      ),
+                    ),
+                    if (unearnedCount > 0 && nextBadge != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: progressColor.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '$unearnedCount left',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: progressColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                if (nextBadge != null) ...[
+                  Row(
+                    children: [
+                      Text(nextBadge.icon, style: const TextStyle(fontSize: 28)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nextBadge.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              nextBadge.description,
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: progressColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: progressColor.withOpacity(0.3)),
+                              ),
+                              child: Text(
+                                status,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: progressColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade200,
+                    color: progressColor,
+                    minHeight: 10,
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$currentPoints/$pointsRequired points',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: progressColor,
+                        ),
+                      ),
+                      Text(
+                        isAchievable ? '🎉 Ready to earn!' : '${pointsNeeded} points needed',
+                        style: TextStyle(
+                          color: progressColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  Center(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.emoji_events, size: 48, color: Colors.purple),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'All Badges Earned!',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You have collected all available badges',
+                          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total Points: $currentPoints',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.purple,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUserBadgesSection() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _controller.getUserBadgesWithDetails(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildBadgesLoading();
+        }
+
+        if (snapshot.hasError) {
+          return _buildBadgesError();
+        }
+
+        final badges = snapshot.data ?? [];
+
+        if (badges.isEmpty) {
+          return _buildNoBadges();
+        }
+
+        return _buildBadgesGrid(badges);
+      },
     );
   }
 
@@ -808,12 +913,19 @@ class _GamificationScreenState extends State<GamificationScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          Text(
-            'Earned',
-            style: TextStyle(
-              color: Colors.green.shade600,
-              fontSize: 8,
-              fontWeight: FontWeight.w500,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'Earned',
+              style: TextStyle(
+                color: Colors.green.shade700,
+                fontSize: 8,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -959,7 +1071,7 @@ class _GamificationScreenState extends State<GamificationScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error starting challenge: $e')),
+        SnackBar(content: Text('Error: ${e.toString()}')),
       );
     }
   }
@@ -996,15 +1108,29 @@ class _GamificationScreenState extends State<GamificationScreen> {
   }
 
   Widget _buildActiveChallengeCard(UserChallenge uc) {
-    final c = _availableChallenges.firstWhere((x) => x.id == uc.challengeId);
+    final challenge = _availableChallenges.firstWhere(
+      (x) => x.id == uc.challengeId,
+      orElse: () => Challenge(
+        id: uc.challengeId,
+        title: 'Active Challenge',
+        description: 'Challenge in progress',
+        points: 0,
+        type: _userType!,
+        activity: '',
+        targetTime: 0,
+        targetLiters: 0,
+        difficulty: 'easy',
+      ),
+    );
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const Icon(Icons.timer, color: Colors.orange),
-        title: Text(c.title),
+        title: Text(challenge.title),
         subtitle: Text('Started: ${_formatDate(uc.startedAt)}'),
         trailing: Text(
-          '${c.points} pts',
+          '${challenge.points} pts',
           style: const TextStyle(
             color: Colors.orange,
             fontWeight: FontWeight.bold,
@@ -1046,12 +1172,12 @@ class _GamificationScreenState extends State<GamificationScreen> {
   }
 
   Widget _buildCompletedChallengeCard(UserChallenge uc) {
-    final c = _availableChallenges.firstWhere(
+    final challenge = _availableChallenges.firstWhere(
       (x) => x.id == uc.challengeId,
       orElse: () => Challenge(
-        id: '',
-        title: 'Challenge Completed',
-        description: '',
+        id: uc.challengeId,
+        title: 'Completed Challenge',
+        description: 'Challenge completed',
         points: uc.earnedPoints,
         type: _userType!,
         activity: '',
@@ -1060,11 +1186,12 @@ class _GamificationScreenState extends State<GamificationScreen> {
         difficulty: 'easy',
       ),
     );
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: const Icon(Icons.check_circle, color: Colors.green),
-        title: Text(c.title),
+        title: Text(challenge.title),
         trailing: Text(
           '+${uc.earnedPoints} pts',
           style: const TextStyle(
@@ -1107,54 +1234,33 @@ class _GamificationScreenState extends State<GamificationScreen> {
     }
   }
 
-  String _getCurrentPoints() {
-    // This is a helper method to get current points for display
-    // You might want to use a StreamBuilder for real-time updates
-    return 'Loading...';
-  }
-
   Color _getChallengeColor(String type) {
     switch (type) {
-      case 'eco':
-        return const Color(0xFF00B894);
-      case 'budget':
-        return const Color(0xFF2D7DD2);
-      case 'family':
-        return const Color(0xFF667EEA);
-      case 'casual':
-        return const Color(0xFFFF9A00);
-      default:
-        return Colors.blueGrey;
+      case 'eco': return const Color(0xFF00B894);
+      case 'budget': return const Color(0xFF2D7DD2);
+      case 'family': return const Color(0xFF667EEA);
+      case 'casual': return const Color(0xFFFF9A00);
+      default: return Colors.blueGrey;
     }
   }
 
   IconData _getChallengeIcon(String type) {
     switch (type) {
-      case 'eco':
-        return Icons.eco;
-      case 'budget':
-        return Icons.savings;
-      case 'family':
-        return Icons.family_restroom;
-      case 'casual':
-        return Icons.person;
-      default:
-        return Icons.flag;
+      case 'eco': return Icons.eco;
+      case 'budget': return Icons.savings;
+      case 'family': return Icons.family_restroom;
+      case 'casual': return Icons.person;
+      default: return Icons.flag;
     }
   }
 
   Color _getRarityColor(String rarity) {
     switch (rarity) {
-      case 'common':
-        return Colors.blue;
-      case 'rare':
-        return Colors.green;
-      case 'epic':
-        return Colors.purple;
-      case 'legendary':
-        return Colors.orange;
-      default:
-        return Colors.grey;
+      case 'common': return Colors.blue;
+      case 'rare': return Colors.green;
+      case 'epic': return Colors.purple;
+      case 'legendary': return Colors.orange;
+      default: return Colors.grey;
     }
   }
 }

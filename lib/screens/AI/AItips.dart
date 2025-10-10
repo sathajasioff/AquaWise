@@ -1104,7 +1104,7 @@ Make the tips highly relevant, practical, and tailored to a $persona's typical w
               Text(
                 "Rainwater Harvesting Simulator",
                 style: GoogleFonts.poppins(
-                  fontSize: 12,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1A2B47),
                 ),
