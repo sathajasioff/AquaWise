@@ -12,6 +12,7 @@ import 'package:watermeter/screens/Home/dashboard_1.dart';
 import 'package:watermeter/screens/Profile/profile.dart';
 import 'package:watermeter/widgets/dashboard_navbar.dart';
 import 'package:watermeter/widgets/weather_widget.dart';
+import 'water_footprint_calculator.dart';
 
 class AIPersonalizationPage extends StatefulWidget {
   const AIPersonalizationPage({super.key});
@@ -495,14 +496,14 @@ Make the tips highly relevant, practical, and tailored to a $persona's typical w
                     _buildAITipsSection(),
                     const SizedBox(height: 20),
                     
+                    // Water Footprint Calculator
+                    WaterFootprintCalculator(),
+                    const SizedBox(height: 20),
+                    
                     // Weather Widget
                     WeatherWidget(
                       onRainfallData: (rainfall) {
                         print("Current rainfall: ${rainfall}mm");
-                        // You can use this data to update your simulator
-                        if (rainfall > 0) {
-                          print("Rain detected! Consider updating simulator.");
-                        }
                       },
                     ),
                     const SizedBox(height: 20),
@@ -1355,7 +1356,6 @@ Make the tips highly relevant, practical, and tailored to a $persona's typical w
   String _getUserName() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      // Try to get display name first, then email username, then fallback
       return user.displayName ?? 
              (user.email?.split('@').first ?? 'User');
     }

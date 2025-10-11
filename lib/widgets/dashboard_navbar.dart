@@ -4,6 +4,8 @@ import '../screens/Login/login.dart';
 import '../screens/Home/dashboard_view.dart';
 import '../settings/settings.dart';
 import '../screens/Profile/profile.dart';
+// Import your community page
+import '../screens/Community/community_feed.dart'; // Make sure to import your community page
 
 class DashboardNavBar extends StatelessWidget {
   final int currentIndex;
@@ -40,8 +42,11 @@ class DashboardNavBar extends StatelessWidget {
         );
         break;
 
-      case 2: // Logout
-        _handleLogout(context);
+      case 2: // Community (replaced Logout)
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CommunityScreen()), 
+        );
         break;
 
       case 3: // Settings
@@ -71,8 +76,8 @@ class DashboardNavBar extends StatelessWidget {
           label: "Profile",
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.logout),
-          label: "Logout",
+          icon: Icon(Icons.people), // Changed from logout to people icon
+          label: "Community",
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
