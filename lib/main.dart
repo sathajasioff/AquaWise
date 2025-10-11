@@ -1,30 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:watermeter/screens/Community/community_feed.dart';
-import 'package:watermeter/screens/Home/home_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_gemini/flutter_gemini.dart';
+import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+// Controllers
+import 'package:watermeter/controllers/theme_controller.dart';
+
+// Screens
+import 'package:watermeter/screens/AI/AItips.dart';
+import 'package:watermeter/screens/About/about.dart';
 import 'package:watermeter/screens/ForgotPassword/forgotPassword.dart';
-import 'package:watermeter/screens/Home/dashboard_1.dart';
-import 'package:watermeter/screens/Home/home_screen.dart';
+import 'package:watermeter/screens/Gamification/gamification.dart';
 import 'package:watermeter/screens/Login/login.dart';
+import 'package:watermeter/screens/Home/dashboard_view.dart';
+import 'package:watermeter/screens/Privacy/privacy.dart';
 import 'package:watermeter/screens/Profile/profile.dart';
+import 'package:watermeter/screens/Profile/edit_profile_page.dart';
 import 'package:watermeter/screens/Questionnaire/quesScreen_1.dart';
 import 'package:watermeter/screens/SignUp/signup.dart';
-import 'package:firebase_core/firebase_core.dart';
-// import 'firebase_options.dart'; // Uncomment if you have this file from flutterfire configure
-
+import 'package:watermeter/screens/Community/community_feed.dart';
+import 'package:watermeter/screens/Home/home_screen.dart';
+import 'package:watermeter/services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // If you have firebase_options.dart, use this:
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
-
-  // Otherwise, this works if google-services.json (Android)
-  // and GoogleService-Info.plist (iOS) are correctly added:
   await Firebase.initializeApp();
 
-  runApp(const MyApp());
+    await NotificationService.initialize();
+
+
+  await dotenv.load(fileName: ".env");
+
+  // ✅ Load keys safely
+  final geminiKey = dotenv.env['GEMINI_API_KEY'];
+  final weatherKey = dotenv.env['OPENWEATHER_API_KEY'];
+
+  if (geminiKey == null || geminiKey.isEmpty) {
+    throw Exception('❌ GEMINI_API_KEY missing in .env');
+  }
+  if (weatherKey == null || weatherKey.isEmpty) {
+    throw Exception('❌ OPENWEATHER_API_KEY missing in .env');
+  }
+
+  // Initialize Gemini
+  await Gemini.init(apiKey: geminiKey);
+  print('✅ Gemini initialized successfully');
+  print('🌤 OpenWeather Key: ${weatherKey.substring(0, 4)}****');
+  print('🤖 Gemini Key: ${geminiKey.substring(0, 4)}****');
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeController()..loadUserTheme(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -32,26 +63,57 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeController = Provider.of<ThemeController>(context);
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WaterMeter',
+      themeMode: themeController.themeMode,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color.fromARGB(255, 23, 110, 210),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF176ED2)),
         useMaterial3: true,
       ),
-
-      home: UsageScreen(), // Start at login screen
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      home: const LoginPage(),
       routes: {
+        '/dashboard': (context) => const DashboardView(),
         '/signup': (context) => const SignupPage(),
         '/login': (context) => const LoginPage(),
-        // '/home': (context) => const HomeScreen(),
-        '/dashboard1': (context) => const DashboardPage(),
         '/questionnaire1': (context) => const QuestionnairePage(),
-        '/forgotPassword': (context) => const ForgotPasswordPage(), 
-        '/community': (context) => const UsageScreen(), 
-        '/profilepage': (context) => const ProfilePage(), // Placeholder, replace with actual ProfilePage when available
+        '/profile': (context) => const ProfilePage(),
+        '/edit_profile': (context) => const EditProfilePage(),
+        '/privacy_policy': (context) => const PrivacyPolicyPage(),
+        '/about': (context) => const AboutPage(),
+        '/aitips': (context) => const AIPersonalizationPage(),
+        '/forgot_password': (context) => const ForgotPasswordPage(),
+        '/gamification': (context) => const GamificationScreen(),
+        '/community': (context) => const CommunityScreen(),
+      },
+    );
+  }
+}
+
+/// ✅ Auth wrapper to check user login before showing pages
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  Future<bool> _isLoggedIn() async {
+    return FirebaseAuth.instance.currentUser != null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _isLoggedIn(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snapshot.data!
+            ? const DashboardView() // Logged in users go to dashboard
+            : const LoginPage();    // Non-logged in users go to login
       },
     );
   }
