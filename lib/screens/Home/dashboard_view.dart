@@ -438,7 +438,7 @@ class _DashboardViewState extends State<DashboardView> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFFF9A00), Color(0xFFFF6B00)],
+                  colors: [Color(0xFF0F84FF), Color(0xFF2DD4BF)],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
