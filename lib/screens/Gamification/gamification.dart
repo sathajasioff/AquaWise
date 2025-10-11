@@ -85,7 +85,7 @@ class _GamificationScreenState extends State<GamificationScreen>
         backgroundColor: const Color(0xFFF8FAFD),
         appBar: AppBar(
           title: Text('${_capitalize(_userType!)} Water Saving Game'),
-          backgroundColor: const Color(0xFFFF9A00),
+          backgroundColor: Color.fromARGB(255, 45, 134, 212),
           foregroundColor: Colors.white,
           actions: [
             if (_isCasualUser)
@@ -125,7 +125,7 @@ class _GamificationScreenState extends State<GamificationScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF9A00)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F84FF),),
             ),
             const SizedBox(height: 16),
             Text(
@@ -800,7 +800,7 @@ class _GamificationScreenState extends State<GamificationScreen>
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFFF9A00), Color(0xFFFF6B00)],
+              colors: [Color(0xFF0F84FF), Color(0xFF2DD4BF)],
             ),
             borderRadius: BorderRadius.circular(20),
           ),
