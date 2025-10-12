@@ -45,6 +45,7 @@ class _DashboardViewState extends State<DashboardView> {
     super.initState();
     _loadUser();
     _loadMonthlyData();
+    _loadBudget(); // Load budget from Firebase
   }
 
   Future<void> _loadUser() async {
@@ -55,6 +56,14 @@ class _DashboardViewState extends State<DashboardView> {
   void _loadMonthlyData() async {
     final total = await _controller.monthlyTotalLiters();
     setState(() => _litersUsed = total);
+  }
+
+  // Load budget from Firebase
+  Future<void> _loadBudget() async {
+    final budget = await _controller.getWaterBudgetLiters();
+    if (budget != null) {
+      setState(() => _budgetLiters = budget);
+    }
   }
 
   void _startTimer() {
@@ -68,18 +77,52 @@ class _DashboardViewState extends State<DashboardView> {
   void _stopTimer() async {
     _timer?.cancel();
     setState(() => _isTiming = false);
+
+    // Calculate hours, minutes, and seconds
+    final hours = _seconds ~/ 3600;
+    final minutes = (_seconds % 3600) ~/ 60;
+    final remainingSeconds = _seconds % 60;
+
     final liters = (_seconds / 60) * 10;
     await _controller.stopTimerAndCheckChallenges(_activity, _seconds, liters);
     _loadMonthlyData();
+
     if (mounted) {
+      // Format time display
+      String timeDisplay;
+      if (hours > 0) {
+        timeDisplay = '${hours}h ${minutes}m ${remainingSeconds}s';
+      } else if (minutes > 0) {
+        timeDisplay = '${minutes}m ${remainingSeconds}s';
+      } else {
+        timeDisplay = '${remainingSeconds}s';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Logged $_activity: ${liters.toStringAsFixed(1)} L"),
+          content: Text(
+            "Logged $_activity: ${liters.toStringAsFixed(1)} L ($timeDisplay)",
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
+    }
+  }
+
+  // Add this helper method to format the timer display
+  String _formatTimer(int totalSeconds) {
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    } else {
+      return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
     }
   }
 
@@ -97,7 +140,9 @@ class _DashboardViewState extends State<DashboardView> {
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               hintText: "e.g. 5000",
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
           actions: [
@@ -106,9 +151,26 @@ class _DashboardViewState extends State<DashboardView> {
               child: const Text("Cancel"),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final v = double.tryParse(txt.text.trim());
-                if (v != null) setState(() => _budgetLiters = v);
+                if (v != null && v > 0) {
+                  setState(() => _budgetLiters = v);
+                  await _controller.setWaterBudgetLiters(v); // Save to Firebase
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Budget set to ${v.toStringAsFixed(0)} L",
+                        ),
+                        backgroundColor: Colors.green,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  }
+                }
                 Navigator.pop(context);
               },
               child: const Text("Save"),
@@ -180,10 +242,7 @@ class _DashboardViewState extends State<DashboardView> {
         foregroundColor: const Color(0xFF1A2B47),
         title: Text(
           "Welcome, ${currentUser?.username ?? 'User'}",
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
         centerTitle: false,
       ),
@@ -199,19 +258,17 @@ class _DashboardViewState extends State<DashboardView> {
   Widget _buildDashboardBody() {
     if (currentUser == null) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF2D7DD2),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF2D7DD2)),
       );
     }
 
     final remaining = _budgetLiters - _litersUsed;
     final percentage = (_litersUsed / _budgetLiters).clamp(0, 1);
-    final Color progressColor = percentage > 0.8 
-        ? Colors.orange 
-        : percentage > 0.6 
-            ? Colors.yellow[700]! 
-            : const Color(0xFF2D7DD2);
+    final Color progressColor = percentage > 0.8
+        ? Colors.orange
+        : percentage > 0.6
+        ? Colors.yellow[700]!
+        : const Color(0xFF2D7DD2);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -247,7 +304,11 @@ class _DashboardViewState extends State<DashboardView> {
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.water_drop, color: Colors.white, size: 24),
+                      child: const Icon(
+                        Icons.water_drop,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Text(
@@ -302,10 +363,7 @@ class _DashboardViewState extends State<DashboardView> {
                         ),
                         const Text(
                           "Used",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
                         ),
                       ],
                     ),
@@ -322,10 +380,7 @@ class _DashboardViewState extends State<DashboardView> {
                         ),
                         const Text(
                           "Budget",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 14),
                         ),
                       ],
                     ),
@@ -333,7 +388,10 @@ class _DashboardViewState extends State<DashboardView> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
@@ -392,7 +450,11 @@ class _DashboardViewState extends State<DashboardView> {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -410,10 +472,7 @@ class _DashboardViewState extends State<DashboardView> {
                         SizedBox(height: 4),
                         Text(
                           "Get personalized water conservation advice",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                       ],
                     ),
@@ -438,7 +497,7 @@ class _DashboardViewState extends State<DashboardView> {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFFFF9A00), Color(0xFFFF6B00)],
+                  colors: [Color(0xFF0F84FF), Color(0xFF2DD4BF)],
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
@@ -457,7 +516,11 @@ class _DashboardViewState extends State<DashboardView> {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.emoji_events, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.emoji_events,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -475,10 +538,7 @@ class _DashboardViewState extends State<DashboardView> {
                         SizedBox(height: 4),
                         Text(
                           "Earn points and unlock achievements",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                       ],
                     ),
@@ -519,7 +579,10 @@ class _DashboardViewState extends State<DashboardView> {
                       color: const Color(0xFFE8F2FF),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.calendar_month, color: Color(0xFF2D7DD2)),
+                    child: const Icon(
+                      Icons.calendar_month,
+                      color: Color(0xFF2D7DD2),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -536,10 +599,7 @@ class _DashboardViewState extends State<DashboardView> {
                         SizedBox(height: 4),
                         Text(
                           "Customize your water usage limit",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 13),
                         ),
                       ],
                     ),
@@ -584,10 +644,7 @@ class _DashboardViewState extends State<DashboardView> {
                 const SizedBox(height: 8),
                 const Text(
                   "Start timer when using water and stop when done",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -605,10 +662,22 @@ class _DashboardViewState extends State<DashboardView> {
                           child: DropdownButton<String>(
                             value: _activity,
                             items: const [
-                              DropdownMenuItem(value: "Bathing", child: Text("Bathing")),
-                              DropdownMenuItem(value: "Cleaning", child: Text("Cleaning")),
-                              DropdownMenuItem(value: "Washing", child: Text("Washing")),
-                              DropdownMenuItem(value: "Cooking", child: Text("Cooking")),
+                              DropdownMenuItem(
+                                value: "Bathing",
+                                child: Text("Bathing"),
+                              ),
+                              DropdownMenuItem(
+                                value: "Cleaning",
+                                child: Text("Cleaning"),
+                              ),
+                              DropdownMenuItem(
+                                value: "Washing",
+                                child: Text("Washing"),
+                              ),
+                              DropdownMenuItem(
+                                value: "Cooking",
+                                child: Text("Cooking"),
+                              ),
                             ],
                             onChanged: (v) => setState(() => _activity = v!),
                             style: const TextStyle(
@@ -625,12 +694,16 @@ class _DashboardViewState extends State<DashboardView> {
                       child: ElevatedButton.icon(
                         onPressed: _isTiming ? _stopTimer : _startTimer,
                         icon: Icon(
-                          _isTiming ? Icons.stop_circle_outlined : Icons.play_circle_filled_outlined,
+                          _isTiming
+                              ? Icons.stop_circle_outlined
+                              : Icons.play_circle_filled_outlined,
                           size: 22,
                         ),
                         label: Text(_isTiming ? "STOP" : "START"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isTiming ? Colors.red : const Color(0xFF2D7DD2),
+                          backgroundColor: _isTiming
+                              ? Colors.red
+                              : const Color(0xFF2D7DD2),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
@@ -653,14 +726,11 @@ class _DashboardViewState extends State<DashboardView> {
                     children: [
                       const Text(
                         "Current Session",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
-                        ),
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        "$_seconds seconds",
+                        _formatTimer(_seconds),
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w700,
@@ -712,10 +782,7 @@ class _DashboardViewState extends State<DashboardView> {
                 const SizedBox(height: 8),
                 const Text(
                   "Track your consumption patterns over time",
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
                 ),
                 const SizedBox(height: 20),
                 StreamBuilder<List<WaterUsage>>(
@@ -751,8 +818,11 @@ class _DashboardViewState extends State<DashboardView> {
                             padding: const EdgeInsets.all(40),
                             child: Column(
                               children: [
-                                Icon(Icons.water_drop_outlined, 
-                                    color: Colors.grey.shade400, size: 48),
+                                Icon(
+                                  Icons.water_drop_outlined,
+                                  color: Colors.grey.shade400,
+                                  size: 48,
+                                ),
                                 const SizedBox(height: 12),
                                 const Text(
                                   "No usage logs yet",
@@ -774,7 +844,9 @@ class _DashboardViewState extends State<DashboardView> {
                             ),
                           )
                         else
-                          ...logs.take(6).map(
+                          ...logs
+                              .take(6)
+                              .map(
                                 (l) => Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(16),
@@ -788,15 +860,21 @@ class _DashboardViewState extends State<DashboardView> {
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           color: const Color(0xFFE8F2FF),
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
-                                        child: const Icon(Icons.water_drop,
-                                            color: Color(0xFF2D7DD2), size: 18),
+                                        child: const Icon(
+                                          Icons.water_drop,
+                                          color: Color(0xFF2D7DD2),
+                                          size: 18,
+                                        ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               l.activity,
@@ -838,49 +916,44 @@ class _DashboardViewState extends State<DashboardView> {
           ),
           const SizedBox(height: 28),
 
-          // In your dashboard_view.dart, add this after the persona section:
-
-// Active Challenges Widget
-const SizedBox(height: 20),
-Container(
-  padding: const EdgeInsets.all(16),
-  decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    boxShadow: [
-      BoxShadow(
-        color: Colors.grey.withOpacity(0.1),
-        blurRadius: 15,
-        offset: const Offset(0, 6),
-      ),
-    ],
-    border: Border.all(color: Colors.grey.shade100),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        "Active Challenges",
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF1A2B47),
-        ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        "Track and complete your ongoing water-saving challenges",
-        style: TextStyle(
-          color: Colors.grey,
-          fontSize: 14,
-        ),
-      ),
-      const SizedBox(height: 16),
-      ActiveChallengesWidget(), // Add the widget here
-    ],
-  ),
-),
-const SizedBox(height: 20),
+          // Active Challenges Widget
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+              border: Border.all(color: Colors.grey.shade100),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Active Challenges",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1A2B47),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Track and complete your ongoing water-saving challenges",
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                ActiveChallengesWidget(), // Add the widget here
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
 
           // Report Generator Card
           GestureDetector(
@@ -910,7 +983,11 @@ const SizedBox(height: 20),
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.analytics, color: Colors.white, size: 24),
+                    child: const Icon(
+                      Icons.analytics,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
@@ -928,10 +1005,7 @@ const SizedBox(height: 20),
                         SizedBox(height: 4),
                         Text(
                           "View detailed water usage analytics",
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
                         ),
                       ],
                     ),

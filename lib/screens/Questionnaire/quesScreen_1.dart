@@ -20,7 +20,7 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
 
   final List<Map<String, dynamic>> _questions = [
     {
-      "question": "What’s your main reason for using this app?",
+      "question": "What's your main reason for using this app?",
       "options": [
         "To protect the environment",
         "To save money on my water bill",
@@ -39,7 +39,7 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
     {
       "question": "How much time are you willing to spend tracking usage?",
       "options": [
-        "I’m fine with detailed tracking and reports",
+        "I'm fine with detailed tracking and reports",
         "I prefer quick updates and easy inputs",
         "I want the app to do most of the work"
       ]
@@ -64,29 +64,47 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
   ];
 
   final Map<String, String> _answerToPersona = {
-    // Q1
+    // Q1 - Main reason
     "To protect the environment": "Eco Warrior",
     "To save money on my water bill": "Budget Saver",
     "Just curious to see my usage": "Casual User",
     "I want to learn how to save water": "Casual User",
-    // Q2
+    
+    // Q2 - Knowledge level
     "A lot — I already practice it daily": "Eco Warrior",
     "Some — I do small things here and there": "Budget Saver",
     "Not much — I need more info": "Casual User",
-    // Q3
-    "I’m fine with detailed tracking and reports": "Eco Warrior",
+    
+    // Q3 - Time commitment
+    "I'm fine with detailed tracking and reports": "Eco Warrior",
     "I prefer quick updates and easy inputs": "Budget Saver",
     "I want the app to do most of the work": "Casual User",
-    // Q4
+    
+    // Q4 - Tracking for whom (CRITICAL FIX FOR FAMILY MODE)
     "Myself": "Casual User",
-    "My family / roommates": "Family Mode",
+    "My family / roommates": "Family Mode", // This should strongly indicate Family Mode
     "My business / rental property": "Budget Saver",
-    // Q5
+    
+    // Q5 - Main goal
     "Reduce wastage to near zero": "Eco Warrior",
     "Lower my bills by a certain percentage": "Budget Saver",
-    "Build a habit of mindful usage": "Family Mode",
+    "Build a habit of mindful usage": "Family Mode", // This should also indicate Family Mode
     "Understand my current usage patterns": "Casual User",
   };
+
+  // Add weights for different questions to give more importance to family-related answers
+  int _getQuestionWeight(int questionIndex) {
+    switch (questionIndex) {
+      case 3: // "Who are you tracking water usage for?" - Most important for Family Mode
+        return 5;
+      case 4: // "Which goal matters most to you?" - Second most important
+        return 4;
+      case 0: // "What's your main reason"
+        return 3;
+      default:
+        return 1;
+    }
+  }
 
   Future<void> _savePersonaToFirestore(String persona) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -169,8 +187,8 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
 
     _answers.forEach((questionIndex, answer) {
       final persona = _answerToPersona[answer] ?? "Casual User";
-      // Weight Q1 and Q5 higher for stronger influence
-      int weight = (questionIndex == 0 || questionIndex == 4) ? 4 : 1;
+      // Use weighted scoring - give more importance to family-related questions
+      int weight = _getQuestionWeight(questionIndex);
       personaCounts[persona] = (personaCounts[persona] ?? 0) + weight;
       print('Question ${questionIndex + 1}: Answer "$answer" → Persona "$persona" (Weight: $weight)'); // Debug
     });
@@ -190,19 +208,40 @@ class _QuestionnairePageState extends State<QuestionnairePage> {
       }
     });
 
-    // Tie-breaker: Prioritize Eco Warrior > Budget Saver > Family Mode > Casual User
+    // SPECIAL CASE: If user selected family-related answers, prioritize Family Mode
+    final hasFamilyTracking = _answers[3] == "My family / roommates";
+    final hasFamilyGoal = _answers[4] == "Build a habit of mindful usage";
+    
+    if (hasFamilyTracking && personaCounts["Family Mode"]! > 0) {
+      print('User selected family tracking - prioritizing Family Mode'); // Debug
+      selectedPersona = "Family Mode";
+    } else if (hasFamilyGoal && personaCounts["Family Mode"]! > 0) {
+      print('User selected family-oriented goal - considering Family Mode'); // Debug
+      // Only switch to Family Mode if it's already competitive
+      if (personaCounts["Family Mode"]! >= maxCount - 2) {
+        selectedPersona = "Family Mode";
+      }
+    }
+
+    // Tie-breaker: Prioritize Family Mode when appropriate, then Eco Warrior > Budget Saver > Casual User
     if (tiedPersonas.length > 1) {
       print('Tie detected: $tiedPersonas'); // Debug
-      const priority = ["Eco Warrior", "Budget Saver", "Family Mode", "Casual User"];
-      for (var persona in priority) {
-        if (tiedPersonas.contains(persona)) {
-          selectedPersona = persona;
-          break;
+      // If Family Mode is in the tie and user has family-related answers, prioritize it
+      if (tiedPersonas.contains("Family Mode") && (hasFamilyTracking || hasFamilyGoal)) {
+        selectedPersona = "Family Mode";
+      } else {
+        const priority = ["Family Mode", "Eco Warrior", "Budget Saver", "Casual User"];
+        for (var persona in priority) {
+          if (tiedPersonas.contains(persona)) {
+            selectedPersona = persona;
+            break;
+          }
         }
       }
     }
 
     print('Final persona: $selectedPersona, Scores: $personaCounts'); // Debug
+    print('Family tracking selected: $hasFamilyTracking, Family goal selected: $hasFamilyGoal'); // Debug
     return {
       'persona': selectedPersona,
       'scores': personaCounts,

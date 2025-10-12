@@ -84,7 +84,7 @@ class _GamificationScreenState extends State<GamificationScreen>
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFD),
         appBar: AppBar(
-          title: Text('${_capitalize(_userType!)} Water Saving Game'),
+          title: Text('Water Saving Game'),
           backgroundColor: Color.fromARGB(255, 45, 134, 212),
           foregroundColor: Colors.white,
           actions: [

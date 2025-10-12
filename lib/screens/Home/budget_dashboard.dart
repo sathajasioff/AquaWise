@@ -76,13 +76,74 @@ class _BudgetDashboardState extends State<BudgetDashboard> {
     );
   }
 
+  // Fixed function to calculate bill based on tariff structure
+  double _calculateWaterBill(double liters) {
+    final cubicMeters = liters / 1000; // Convert liters to cubic meters
+    double totalBill = 0.0;
+    double remainingUnits = cubicMeters;
+
+    // Define tariff blocks with proper types
+    final List<Map<String, dynamic>> tariffBlocks = [
+      {'min': 0.0, 'max': 5.0, 'rate': 60.00},
+      {'min': 6.0, 'max': 10.0, 'rate': 80.00},
+      {'min': 11.0, 'max': 15.0, 'rate': 100.00},
+      {'min': 16.0, 'max': 20.0, 'rate': 110.00},
+      {'min': 21.0, 'max': 25.0, 'rate': 130.00},
+      {'min': 26.0, 'max': 30.0, 'rate': 160.00},
+      {'min': 31.0, 'max': 40.0, 'rate': 180.00},
+      {'min': 41.0, 'max': 50.0, 'rate': 210.00},
+      {'min': 51.0, 'max': 75.0, 'rate': 240.00},
+      {'min': 76.0, 'max': 100.0, 'rate': 270.00},
+      {'min': 101.0, 'max': double.infinity, 'rate': 300.00},
+    ];
+
+    for (final block in tariffBlocks) {
+      if (remainingUnits <= 0) break;
+
+      final blockMin = block['min'] as double;
+      final blockMax = block['max'] as double;
+      final blockRate = block['rate'] as double;
+
+      if (cubicMeters > blockMin) {
+        double unitsInThisBlock;
+        
+        if (blockMax == double.infinity) {
+          unitsInThisBlock = remainingUnits;
+        } else {
+          final potentialUnits = cubicMeters - blockMin;
+          unitsInThisBlock = potentialUnits.clamp(0.0, blockMax - blockMin + 1);
+        }
+
+        final actualUnits = unitsInThisBlock > remainingUnits 
+            ? remainingUnits 
+            : unitsInThisBlock;
+
+        if (actualUnits > 0) {
+          totalBill += actualUnits * blockRate;
+          remainingUnits -= actualUnits;
+        }
+      }
+    }
+
+    return totalBill;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<double>(
       future: widget.controller.monthlyTotalLiters(),
       builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        if (snap.hasError) {
+          return Center(child: Text('Error: ${snap.error}'));
+        }
+
         final usedL = snap.data ?? 0;
-        final bill = widget.controller.estimateBillRs(usedL);
+        // Use the new calculation function instead of estimateBillRs
+        final bill = _calculateWaterBill(usedL);
         final remainingBudget = _moneyBudget != null ? _moneyBudget! - bill : 0;
         final isOverBudget = _moneyBudget != null && bill > _moneyBudget!;
         final budgetPercentage = _moneyBudget != null && _moneyBudget! > 0 
