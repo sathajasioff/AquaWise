@@ -6,6 +6,9 @@ class DashboardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -14,7 +17,7 @@ class DashboardPage extends StatelessWidget {
         title: Text(
           "AquaWise",
           style: GoogleFonts.poppins(
-            fontSize: 22,
+            fontSize: screenWidth * 0.055,
             fontWeight: FontWeight.bold,
             color: const Color(0xFF176ED2),
           ),
@@ -26,22 +29,21 @@ class DashboardPage extends StatelessWidget {
               Navigator.pushNamed(context, '/profilepage');
             },
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: screenWidth * 0.03),
           const Icon(Icons.notifications_none, color: Colors.black87),
-          const SizedBox(width: 12),
+          SizedBox(width: screenWidth * 0.03),
           const Icon(Icons.settings, color: Colors.black87),
-          const SizedBox(width: 16),
+          SizedBox(width: screenWidth * 0.04),
         ],
       ),
-
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(screenWidth * 0.04),
         child: Column(
           children: [
             // 🔹 Today's Water Usage Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(screenWidth * 0.05),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF00B4DB), Color(0xFF0083B0)],
@@ -49,48 +51,61 @@ class DashboardPage extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Text(
                     "Today's Water Usage",
                     style: GoogleFonts.poppins(
-                      fontSize: 18,
+                      fontSize: screenWidth * 0.045,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: screenWidth * 0.025),
                   Text(
                     "245L",
                     style: GoogleFonts.poppins(
-                      fontSize: 36,
+                      fontSize: screenWidth * 0.09,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: screenWidth * 0.04),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _usageButton("-10L"),
-                      const SizedBox(width: 10),
-                      _usageButton("+10L"),
+                      _usageButton("-10L", screenWidth),
+                      SizedBox(width: screenWidth * 0.025),
+                      _usageButton("+10L", screenWidth),
                     ],
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
+            SizedBox(height: screenWidth * 0.05),
 
             // 🔹 Daily Goal Progress
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(screenWidth * 0.05),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,14 +115,13 @@ class DashboardPage extends StatelessWidget {
                       Text(
                         "Daily Goal Progress",
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
+                          fontSize: screenWidth * 0.04,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.orange[100],
                           borderRadius: BorderRadius.circular(12),
@@ -115,7 +129,7 @@ class DashboardPage extends StatelessWidget {
                         child: Text(
                           "Over Target",
                           style: GoogleFonts.poppins(
-                            fontSize: 12,
+                            fontSize: screenWidth * 0.03,
                             fontWeight: FontWeight.bold,
                             color: Colors.orange[800],
                           ),
@@ -123,7 +137,7 @@ class DashboardPage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: screenWidth * 0.025),
                   LinearProgressIndicator(
                     value: 245 / 200, // used/goal
                     backgroundColor: Colors.grey[200],
@@ -131,40 +145,42 @@ class DashboardPage extends StatelessWidget {
                     minHeight: 10,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: screenWidth * 0.02),
                   Text(
                     "Used: 245L   |   Goal: 200L",
                     style: GoogleFonts.poppins(
-                      fontSize: 13,
+                      fontSize: screenWidth * 0.032,
                       color: Colors.grey[700],
                     ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
+            SizedBox(height: screenWidth * 0.05),
 
             // 🔹 Weekly Stats
             Row(
               children: [
                 Expanded(
-                  child: _statCard("This Week", "1680L", Colors.green),
+                  child: _statCard("This Week", "1680L", Colors.green, screenWidth),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: screenWidth * 0.03),
                 Expanded(
-                  child: _statCard("Weekly Goal", "1400L", Colors.orange),
+                  child: _statCard("Weekly Goal", "1400L", Colors.orange, screenWidth),
                 ),
               ],
             ),
+            SizedBox(height: screenWidth * 0.05),
+
+            // 🔹 AI Tips Card
+            _buildAITipsCard(theme, screenWidth, context),
           ],
         ),
       ),
     );
   }
 
-  // Reusable button
-  static Widget _usageButton(String label) {
+  Widget _usageButton(String label, double screenWidth) {
     return ElevatedButton(
       onPressed: () {},
       style: ElevatedButton.styleFrom(
@@ -172,11 +188,12 @@ class DashboardPage extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.04, vertical: screenWidth * 0.03),
       ),
       child: Text(
         label,
         style: GoogleFonts.poppins(
-          fontSize: 16,
+          fontSize: screenWidth * 0.04,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -184,13 +201,19 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // Reusable stat card
-  static Widget _statCard(String title, String value, Color color) {
+  Widget _statCard(String title, String value, Color color, double screenWidth) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(screenWidth * 0.04),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,20 +221,87 @@ class DashboardPage extends StatelessWidget {
           Text(
             title,
             style: GoogleFonts.poppins(
-              fontSize: 14,
+              fontSize: screenWidth * 0.035,
               color: Colors.grey[600],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: screenWidth * 0.02),
           Text(
             value,
             style: GoogleFonts.poppins(
-              fontSize: 22,
+              fontSize: screenWidth * 0.055,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAITipsCard(ThemeData theme, double screenWidth, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/aitips');
+      },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(screenWidth * 0.04),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF176ED2), Color(0xFF4A90E2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.psychology,
+              color: Colors.white,
+              size: screenWidth * 0.07,
+            ),
+            SizedBox(width: screenWidth * 0.03),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'AI-Powered Tips',
+                    style: GoogleFonts.poppins(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: screenWidth * 0.015),
+                  Text(
+                    'Get personalized water-saving tips tailored to your usage.',
+                    style: GoogleFonts.poppins(
+                      fontSize: screenWidth * 0.03,
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: screenWidth * 0.05,
+            ),
+          ],
+        ),
       ),
     );
   }

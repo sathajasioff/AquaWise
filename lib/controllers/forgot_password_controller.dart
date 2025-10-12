@@ -5,24 +5,36 @@ class ForgotPasswordController {
 
   Future<String?> sendPasswordReset(String email) async {
     try {
-      final normalizedEmail = email.trim().toLowerCase();
+      final normalizedEmail = email.trim();
+      
+      print("🔄 Attempting to send reset email to: '$normalizedEmail'");
 
-      final methods = await _auth.fetchSignInMethodsForEmail(normalizedEmail);
-      print("DEBUG → Providers for $normalizedEmail = $methods");
-
-      if (methods.isEmpty) {
-        return "No account found with this email.";
-      }
-
-      if (methods.contains("password")) {
-        await _auth.sendPasswordResetEmail(email: normalizedEmail);
-        return null; // success
-      } else {
-        return "⚠️ This account uses ${methods.first}. Please sign in with that provider.";
-      }
+      // Try to send reset email directly first
+      await _auth.sendPasswordResetEmail(email: normalizedEmail);
+      
+      print("✅ Password reset email sent successfully");
+      return null; // Success
+      
     } on FirebaseAuthException catch (e) {
-      print("DEBUG → FirebaseAuthException: ${e.code}, ${e.message}");
-      return e.message ?? "Something went wrong.";
+      print("🔴 FirebaseAuthException: ${e.code}, ${e.message}");
+      
+      switch (e.code) {
+        case 'invalid-email':
+          return "Please enter a valid email address.";
+        case 'user-not-found':
+          // Let's debug why this is happening
+          print("🔴 USER-NOT-FOUND for: '$email'");
+          return "No account found with this email address. Please check if you used a different email or signed up with Google/Facebook.";
+        case 'too-many-requests':
+          return "Too many attempts. Please try again in a few minutes.";
+        case 'network-request-failed':
+          return "Please check your internet connection.";
+        default:
+          return "Unable to send reset email: ${e.message}";
+      }
+    } catch (e) {
+      print("🔴 Unexpected error: $e");
+      return "An error occurred. Please try again.";
     }
   }
 }
